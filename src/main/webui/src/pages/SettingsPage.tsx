@@ -48,7 +48,7 @@ function buildAiPreviewReply(config: StoreConfig): string {
 }
 
 export function SettingsPage() {
-  const { isDemoMode, navigate, setStoreSlug, setStoreName, pushToast } = useApp();
+  const { navigate, setStoreSlug, setStoreName, pushToast } = useApp();
   const [config, setConfig] = useState<StoreConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -73,7 +73,7 @@ export function SettingsPage() {
 
   useEffect(() => {
     loadConfig();
-  }, [loadConfig, isDemoMode]);
+  }, [loadConfig]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();

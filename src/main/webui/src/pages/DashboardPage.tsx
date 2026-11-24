@@ -13,7 +13,6 @@ import {
 } from 'recharts';
 import {
   ArrowRight,
-  Sparkles,
   RotateCcw,
   AlertTriangle,
   ChefHat,
@@ -95,12 +94,11 @@ function shortenFlavorName(name: string): string {
 }
 
 export function DashboardPage() {
-  const { isDemoMode, navigate, pushToast } = useApp();
+  const { navigate } = useApp();
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [simulating, setSimulating] = useState(false);
   const [revenueMode, setRevenueMode] = useState<'acumulada' | 'hora'>('acumulada');
 
   const loadDashboardData = useCallback(async () => {
@@ -126,7 +124,7 @@ export function DashboardPage() {
 
   useEffect(() => {
     loadDashboardData();
-  }, [loadDashboardData, isDemoMode]);
+  }, [loadDashboardData]);
 
   useEffect(() => {
     return subscribeNewOrderEvents((incomingOrder) => {
@@ -136,27 +134,6 @@ export function DashboardPage() {
       });
     });
   }, []);
-
-  const handleSimulateOrder = async () => {
-    setSimulating(true);
-    try {
-      const created = await api.simulateWhatsAppOrder();
-      setOrders((prev) => [created, ...prev]);
-      pushToast({
-        title: `Novo pedido ${created.codigo} contabilizado`,
-        description: `${created.clienteNome} — ${formatCurrency(created.valorTotal)} via WhatsApp IA`,
-        tone: 'success',
-      });
-    } catch (err) {
-      pushToast({
-        title: 'Erro ao simular pedido',
-        description: err instanceof Error ? err.message : 'Tente novamente.',
-        tone: 'error',
-      });
-    } finally {
-      setSimulating(false);
-    }
-  };
 
   // Summary KPIs
   const summary = useMemo(() => {
@@ -285,17 +262,6 @@ export function DashboardPage() {
     <AdminLayout
       title="Visão Geral da Confeitaria"
       sectionLabel="Dashboard"
-      topBarAction={
-        <button
-          type="button"
-          onClick={handleSimulateOrder}
-          disabled={simulating}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#B45309] px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#92400E] disabled:opacity-60 whitespace-nowrap shrink-0 sm:px-4 sm:text-sm"
-        >
-          <Sparkles className="h-4 w-4" />
-          <span>{simulating ? 'Recebendo...' : 'Simular Pedido via WhatsApp IA'}</span>
-        </button>
-      }
     >
       {error && (
         <div className="mb-5 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">

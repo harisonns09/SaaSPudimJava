@@ -20,6 +20,7 @@ export function App() {
                 <Routes>
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} /> {/* Adiciona a nova rota */}
+                    <Route path="/produtos" element={<Navigate to="/admin/produtos" replace />} />
 
                     <Route
                         path="/admin"

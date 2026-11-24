@@ -18,13 +18,15 @@ public class Order extends PanacheEntity {
     @Column(length = 50, nullable = false)
     public String tenantId;
 
-    @Column(length = 10, unique = true)
+    @Column(length = 20, unique = true, nullable = false)
     public String codigo;
 
     @Column(nullable = false)
     public String clienteNome;
 
     public String clienteWhatsapp;
+
+    public String clienteEmail;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -37,14 +39,16 @@ public class Order extends PanacheEntity {
     @Column(nullable = false)
     public BigDecimal valorTotal;
 
-    @Column(nullable = false)
+    public String tipoEntrega;
+
+    public String endereco;
+
+    @Column(length = 1000)
+    public String observacoes;
+
+    @Column(nullable = false, updatable = false)
     public LocalDateTime criadoEm = LocalDateTime.now();
 
-    // Outros campos do frontend que podem ser adicionados:
-    // public String tipoEntrega;
-    // public String endereco;
-    // public String observacoes;
-    // public BigDecimal subtotal;
-    // public BigDecimal taxaEntrega;
-    // public String origem;
+    @Column(nullable = false)
+    public LocalDateTime atualizadoEm = LocalDateTime.now();
 }

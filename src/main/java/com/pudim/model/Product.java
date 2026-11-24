@@ -24,9 +24,16 @@ public class Product extends PanacheEntity {
     @Column(nullable = false)
     public BigDecimal precoVenda;
 
+    public BigDecimal custoEstimado;
+
     public int pesoGramas;
 
     public int estoqueAtual;
+
+    @Column(length = 1000)
+    public String imagemUrl;
+
+    public String destaque;
 
     public boolean ativo = true;
 }

@@ -15,7 +15,7 @@ import { ExportMenuButton } from '../components/ExportMenuButton';
 import { ResilientImage } from '../components/ResilientImage';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
-import { ASSET_IMAGES } from '../services/mockData';
+import { ASSET_IMAGES } from '../services/assetPaths';
 import { Product } from '../types';
 import {
   calculateProfitMargin,
@@ -57,7 +57,7 @@ const EMPTY_FORM: ProductFormState = {
 };
 
 export function ProductsPage() {
-  const { isDemoMode, storeName, pushToast } = useApp();
+  const { storeName, pushToast } = useApp();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +84,7 @@ export function ProductsPage() {
 
   useEffect(() => {
     loadProducts();
-  }, [loadProducts, isDemoMode]);
+  }, [loadProducts]);
 
   const openCreateModal = () => {
     setForm(EMPTY_FORM);

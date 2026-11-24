@@ -11,7 +11,6 @@ import {
   Phone,
   X,
   MessageSquareText,
-  Sparkles,
   CheckCircle2,
   RotateCcw,
 } from 'lucide-react';
@@ -110,11 +109,10 @@ function OriginTag({ origin }: { origin: OrderOrigin }) {
 }
 
 export function OrdersKanbanPage() {
-  const { isDemoMode, storeName, pushToast } = useApp();
+  const { storeName, pushToast } = useApp();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [simulating, setSimulating] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [originFilter, setOriginFilter] = useState<'ALL' | OrderOrigin>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -139,7 +137,7 @@ export function OrdersKanbanPage() {
 
   useEffect(() => {
     loadOrders();
-  }, [loadOrders, isDemoMode]);
+  }, [loadOrders]);
 
   useEffect(() => {
     return subscribeNewOrderEvents((incomingOrder) => {
@@ -149,29 +147,6 @@ export function OrdersKanbanPage() {
       });
     });
   }, []);
-
-  const handleSimulateWhatsAppOrder = async () => {
-    setSimulating(true);
-    try {
-      const created = await api.simulateWhatsAppOrder();
-      setOrders((prev) => [created, ...prev]);
-      pushToast({
-        title: `Novo pedido via WhatsApp IA (${created.codigo})`,
-        description: `${created.clienteNome} • ${created.itens
-          .map((i) => `${i.quantidade}x ${i.nomeProduto.replace('Pudim ', '')}`)
-          .join(', ')}`,
-        tone: 'success',
-      });
-    } catch (err) {
-      pushToast({
-        title: 'Erro ao simular pedido',
-        description: err instanceof Error ? err.message : 'Tente novamente.',
-        tone: 'error',
-      });
-    } finally {
-      setSimulating(false);
-    }
-  };
 
   const handleMoveStatus = async (order: Order, nextStatus: OrderStatus) => {
     setUpdatingId(order.id);
@@ -243,17 +218,6 @@ export function OrdersKanbanPage() {
     <AdminLayout
       title="Kanban de Pedidos da Cozinha"
       sectionLabel="Pedidos (Cozinha)"
-      topBarAction={
-        <button
-          type="button"
-          onClick={handleSimulateWhatsAppOrder}
-          disabled={simulating}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#B45309] px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#92400E] disabled:opacity-60 whitespace-nowrap shrink-0 sm:px-4 sm:text-sm"
-        >
-          <Sparkles className="h-4 w-4" />
-          <span>{simulating ? 'Recebendo...' : 'Simular Pedido via WhatsApp IA'}</span>
-        </button>
-      }
     >
       {/* Operational KPI Strip */}
       <section

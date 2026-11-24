@@ -10,12 +10,9 @@ import {
   Menu,
   X,
   Radio,
-  Database,
-  Server,
   Bell,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { API_BASE_URL } from '../services/api';
 import { KitchenAlertsMenu } from './KitchenAlertsMenu';
 
 interface AdminLayoutProps {
@@ -78,8 +75,6 @@ export function AdminLayout({
     logout,
     storeSlug,
     storeName,
-    isDemoMode,
-    toggleDemoMode,
     notificationPermission,
     toggleBrowserNotifications,
     isLiveConnected: contextLiveConnected,
@@ -204,31 +199,6 @@ export function AdminLayout({
       </div>
 
       <div className="space-y-3 border-t border-[#EAE1D5] p-4">
-        <div className="rounded-lg border border-[#EFE6DA] bg-[#FAF7F2] p-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <span className="flex items-center gap-1.5 text-xs font-medium text-[#5C4A3E]">
-              {isDemoMode ? (
-                <Database className="h-3.5 w-3.5 text-[#B45309]" />
-              ) : (
-                <Server className="h-3.5 w-3.5 text-emerald-700" />
-              )}
-              {isDemoMode ? 'Modo Demo' : 'API Real'}
-            </span>
-            <button
-              type="button"
-              onClick={toggleDemoMode}
-              className="rounded-md border border-[#DFD2C0] bg-white px-2 py-1 text-[11px] font-semibold text-[#291D16] transition-colors hover:border-[#B45309] hover:text-[#B45309] whitespace-nowrap"
-            >
-              {isDemoMode ? 'Usar API Real' : 'Usar Demo'}
-            </button>
-          </div>
-          {!isDemoMode && (
-            <p className="mt-1.5 truncate font-mono text-[10px] text-[#7A6658]" title={API_BASE_URL}>
-              {API_BASE_URL}
-            </p>
-          )}
-        </div>
-
         <div className="flex items-center justify-between gap-2 pt-1">
           <div className="min-w-0">
             <p className="truncate text-xs font-semibold text-[#291D16]">
@@ -298,11 +268,7 @@ export function AdminLayout({
           <div className="flex shrink-0 items-center gap-2.5 sm:gap-3.5">
             <div
               className="hidden items-center gap-2 text-xs font-medium xl:flex"
-              title={
-                isDemoMode
-                  ? 'Fluxo em tempo real pronto (SSE /api/pedidos/stream em produção)'
-                  : 'Conectado ao stream SSE de pedidos'
-              }
+              title="Conexão com o stream SSE de pedidos"
             >
               <Radio
                 className={`h-3.5 w-3.5 ${

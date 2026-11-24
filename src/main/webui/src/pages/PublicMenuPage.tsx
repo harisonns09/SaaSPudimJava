@@ -25,7 +25,7 @@ interface PublicMenuPageProps {
 }
 
 export function PublicMenuPage({ slug }: PublicMenuPageProps) {
-  const { navigate, session, loginDemo, isDemoMode, pushToast } = useApp();
+  const { navigate, session, pushToast } = useApp();
   const [menuData, setMenuData] = useState<PublicMenuResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +63,7 @@ export function PublicMenuPage({ slug }: PublicMenuPageProps) {
 
   useEffect(() => {
     loadMenu();
-  }, [loadMenu, isDemoMode]);
+  }, [loadMenu]);
 
   const products = useMemo(() => {
     return (menuData?.produtos || []).filter(
@@ -167,9 +167,7 @@ export function PublicMenuPage({ slug }: PublicMenuPageProps) {
       await loadMenu();
       pushToast({
         title: `Pedido ${created.codigo} enviado para a cozinha!`,
-        description: isDemoMode
-          ? 'Ele já apareceu na coluna Pendente do Kanban administrativo.'
-          : 'A loja receberá seu pedido em instantes.',
+        description: 'A loja receberá seu pedido em instantes.',
         tone: 'success',
       });
     } catch (err) {
@@ -189,7 +187,7 @@ export function PublicMenuPage({ slug }: PublicMenuPageProps) {
         <div className="flex items-center justify-between border-b border-[#EAE1D5] bg-white px-4 py-2.5 text-xs">
           <button
             type="button"
-            onClick={() => navigate(session ? '/admin/dashboard' : '/admin/login')}
+            onClick={() => navigate(session ? '/admin' : '/login')}
             className="inline-flex items-center gap-1.5 font-semibold text-[#5C4A3E] transition-colors hover:text-[#B45309]"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -286,13 +284,7 @@ export function PublicMenuPage({ slug }: PublicMenuPageProps) {
               <div className="mt-6 flex flex-col gap-2.5">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (!session && isDemoMode) {
-                      void loginDemo('/admin/pedidos');
-                    } else {
-                      navigate('/admin/pedidos');
-                    }
-                  }}
+                  onClick={() => navigate('/admin/pedidos')}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#B45309] px-4 py-3 text-sm font-semibold text-white hover:bg-[#92400E]"
                 >
                   <ChefHat className="h-4 w-4" />

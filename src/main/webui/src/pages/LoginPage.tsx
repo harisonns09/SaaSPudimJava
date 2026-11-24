@@ -4,21 +4,19 @@ import {
   Store,
   Lock,
   Mail,
-  Database,
-  Server,
   AlertCircle,
   ChefHat,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { ASSET_IMAGES } from '../services/mockData';
+import { ASSET_IMAGES } from '../services/assetPaths';
 import { API_BASE_URL } from '../services/api';
 import { BrandMark } from '../components/AdminLayout';
 import { ResilientImage } from '../components/ResilientImage';
 
 export function LoginPage() {
-  const { login, loginDemo, navigate, isDemoMode, toggleDemoMode, storeSlug } = useApp();
-  const [email, setEmail] = useState('maria@pudimdamaria.com.br');
-  const [senha, setSenha] = useState('••••••••');
+  const { login, navigate, storeSlug } = useApp();
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,16 +32,6 @@ export function LoginPage() {
           ? err.message
           : 'Não foi possível autenticar. Verifique suas credenciais ou o servidor.'
       );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDemoAccess = async () => {
-    setError(null);
-    setLoading(true);
-    try {
-      await loginDemo();
     } finally {
       setLoading(false);
     }
@@ -117,7 +105,7 @@ export function LoginPage() {
           </div>
           <button
             type="button"
-            onClick={() => navigate(`/loja/${storeSlug || 'pudim-da-maria'}`)}
+            onClick={() => storeSlug && navigate(`/${storeSlug}`)}
             className="ml-auto inline-flex items-center gap-2 text-sm font-medium text-[#B45309] transition-colors hover:text-[#92400E] whitespace-nowrap"
           >
             <Store className="h-4 w-4" />
@@ -198,59 +186,10 @@ export function LoginPage() {
             </button>
           </form>
 
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center" aria-hidden="true">
-              <div className="w-full border-t border-[#E6DCD0]" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-[#FAF7F2] px-3 text-[#7A6658]">
-                Acesso rápido para demonstração
-              </span>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <button
-              type="button"
-              onClick={handleDemoAccess}
-              disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#D7C7B2] bg-white px-5 py-3 text-sm font-semibold text-[#291D16] transition-colors hover:border-[#B45309] hover:bg-[#FDF9F3]"
-            >
-              <span>Entrar como Demo (Pudim da Maria)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate('/loja/pudim-da-maria')}
-              className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-[#6B574A] transition-colors hover:bg-[#F3ECE2] hover:text-[#291D16]"
-            >
-              <Store className="h-4 w-4 text-[#B45309]" />
-              <span>Abrir Cardápio Público (/loja/pudim-da-maria)</span>
-            </button>
-          </div>
         </div>
 
-        {/* Discreet Demo / Real API Toggle */}
-        <div className="mx-auto flex w-full max-w-md flex-wrap items-center justify-between gap-2 border-t border-[#E8DFD3] pt-4 text-xs text-[#7A6658]">
-          <div className="flex items-center gap-1.5">
-            {isDemoMode ? (
-              <Database className="h-3.5 w-3.5 text-[#B45309]" />
-            ) : (
-              <Server className="h-3.5 w-3.5 text-emerald-700" />
-            )}
-            <span>
-              {isDemoMode
-                ? 'Modo Demo ativo (dados locais)'
-                : `API Quarkus: ${API_BASE_URL}`}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={toggleDemoMode}
-            className="font-semibold text-[#291D16] underline decoration-[#D4C3AE] underline-offset-4 transition-colors hover:text-[#B45309]"
-          >
-            {isDemoMode ? 'Alternar para API Real' : 'Voltar para Modo Demo'}
-          </button>
+        <div className="mx-auto w-full max-w-md border-t border-[#E8DFD3] pt-4 text-center text-xs text-[#7A6658]">
+          API: {API_BASE_URL}
         </div>
       </div>
     </div>

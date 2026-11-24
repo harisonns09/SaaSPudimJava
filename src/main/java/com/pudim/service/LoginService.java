@@ -2,15 +2,13 @@ package com.pudim.service;
 
 import com.pudim.model.LoginRequest;
 import com.pudim.model.User;
+import com.pudim.exception.InvalidCredentialsException;
+import com.pudim.repository.UserRepository;
 import io.quarkus.elytron.security.common.BcryptUtil;
 import io.smallrye.jwt.build.Jwt;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.NoResultException;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.Response;
 
 import java.time.Duration;
 import java.util.Set;
@@ -19,29 +17,23 @@ import java.util.Set;
 public class LoginService {
 
     @Inject
-    EntityManager em;
+    UserRepository userRepository;
 
     @Transactional
     public String login(LoginRequest loginRequest) {
-        try {
-            User user = em.createQuery("SELECT u FROM User u WHERE u.email = :email", User.class)
-                    .setParameter("email", loginRequest.getEmail())
-                    .getSingleResult();
+        User user = userRepository.findByEmail(loginRequest.getEmail())
+                .orElseThrow(InvalidCredentialsException::new);
 
-            if (!BcryptUtil.matches(loginRequest.getPassword(), user.getPassword())) {
-                throw new WebApplicationException("Usuário ou senha inválidos", Response.Status.UNAUTHORIZED);
-            }
-
-            return Jwt.issuer("https://pudim.com/issuer")
-                    .upn(user.getEmail())
-                    .groups(user.getRoles()) // Adiciona os papéis do usuário à claim 'groups'
-                    .claim("tenant_id", user.getTenantId())
-                    .expiresIn(Duration.ofHours(1))
-                    .sign();
-
-        } catch (NoResultException e) {
-            throw new WebApplicationException("Usuário ou senha inválidos", Response.Status.UNAUTHORIZED);
+        if (!BcryptUtil.matches(loginRequest.getPassword(), user.getPassword())) {
+            throw new InvalidCredentialsException();
         }
+
+        return Jwt.issuer("https://pudim.com/issuer")
+                .upn(user.getEmail())
+                .groups(user.getRoles())
+                .claim("tenant_id", user.getTenantId())
+                .expiresIn(Duration.ofHours(1))
+                .sign();
     }
 
     @Transactional
@@ -51,7 +43,7 @@ public class LoginService {
         newUser.setPassword(BcryptUtil.bcryptHash(password));
         newUser.setTenantId(tenantId);
         newUser.setRoles(roles);
-        em.persist(newUser);
+        userRepository.persist(newUser);
         return newUser;
     }
 }

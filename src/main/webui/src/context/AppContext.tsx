@@ -10,8 +10,6 @@ import {
   api,
   clearSession,
   getStoredSession,
-  isDemoModeEnabled,
-  setDemoModeEnabled,
 } from '../services/api';
 import { AuthSession, Order, OrderOrigin } from '../types';
 import { formatCurrency } from '../utils/format';
@@ -63,11 +61,7 @@ interface AppContextValue {
   currentPath: string;
   navigate: (path: string, replace?: boolean) => void;
   session: AuthSession | null;
-  isDemoMode: boolean;
-  toggleDemoMode: () => void;
-  setDemoMode: (enabled: boolean) => void;
   login: (email: string, senha: string) => Promise<void>;
-  loginDemo: (redirectTo?: string) => Promise<void>;
   logout: () => void;
   storeSlug: string;
   setStoreSlug: (slug: string) => void;
@@ -93,7 +87,7 @@ const AppContext = createContext<AppContextValue | undefined>(undefined);
 function normalizeInitialPath(): string {
   const path = window.location.pathname;
   if (!path || path === '/') {
-    return getStoredSession() ? '/admin/dashboard' : '/admin/login';
+    return getStoredSession() ? '/admin' : '/login';
   }
   return path;
 }
@@ -101,9 +95,8 @@ function normalizeInitialPath(): string {
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentPath, setCurrentPath] = useState<string>(normalizeInitialPath);
   const [session, setSession] = useState<AuthSession | null>(() => getStoredSession());
-  const [isDemoMode, setIsDemoModeState] = useState<boolean>(() => isDemoModeEnabled());
-  const [storeSlug, setStoreSlug] = useState<string>('pudim-da-maria');
-  const [storeName, setStoreName] = useState<string>('Pudim da Maria');
+  const [storeSlug, setStoreSlug] = useState<string>('');
+  const [storeName, setStoreName] = useState<string>('');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const [notificationPermission, setNotificationPermission] =
@@ -115,7 +108,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     readBoolPref(PREF_KEYS.SOUND_ALERTS, true)
   );
   const [kitchenAlerts, setKitchenAlerts] = useState<KitchenAlertItem[]>([]);
-  const [isLiveConnected, setIsLiveConnected] = useState<boolean>(true);
+  const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
   const notifiedOrderIdsRef = useRef<Set<string>>(new Set());
 
   const navigate = useCallback((path: string, replace = false) => {
@@ -130,7 +123,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const onPopState = () => {
-      setCurrentPath(window.location.pathname || '/admin/login');
+      setCurrentPath(window.location.pathname || '/login');
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
@@ -155,7 +148,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {
         // Ignore if Real API is offline during boot
       });
-  }, [session, isDemoMode]);
+  }, [session]);
 
   useEffect(() => {
     if (!session) {
@@ -168,7 +161,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       },
       (connected) => setIsLiveConnected(connected)
     );
-  }, [session, isDemoMode]);
+  }, [session]);
 
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((item) => item.id !== id));
@@ -371,56 +364,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const unreadAlertsCount = kitchenAlerts.filter((a) => !a.read).length;
 
-  const setDemoMode = useCallback(
-    (enabled: boolean) => {
-      setDemoModeEnabled(enabled);
-      setIsDemoModeState(enabled);
-      pushToast({
-        title: enabled ? 'Modo Demo ativado' : 'Modo API Real ativado',
-        description: enabled
-          ? 'Dados simulados da confeitaria Pudim da Maria prontos para teste.'
-          : 'Conectando ao backend Quarkus configurado em VITE_API_URL.',
-        tone: 'neutral',
-      });
-    },
-    [pushToast]
-  );
-
-  const toggleDemoMode = useCallback(() => {
-    setDemoMode(!isDemoMode);
-  }, [isDemoMode, setDemoMode]);
-
   const login = useCallback(
     async (email: string, senha: string) => {
       const newSession = await api.login(email, senha);
       setSession(newSession);
-      if (newSession.tenantId) setStoreSlug(newSession.tenantId);
-      navigate('/admin/dashboard', true);
+      navigate('/admin', true);
     },
     [navigate]
-  );
-
-  const loginDemo = useCallback(
-    async (redirectTo = '/admin/dashboard') => {
-      setDemoModeEnabled(true);
-      setIsDemoModeState(true);
-      const demoSession = await api.loginDemo();
-      setSession(demoSession);
-      setStoreSlug(demoSession.tenantId);
-      navigate(redirectTo, true);
-      pushToast({
-        title: 'Bem-vinda ao painel da Pudim da Maria',
-        description: 'Painel carregado em Modo Demonstração.',
-        tone: 'success',
-      });
-    },
-    [navigate, pushToast]
   );
 
   const logout = useCallback(() => {
     clearSession();
     setSession(null);
-    navigate('/admin/login', true);
+    navigate('/login', true);
   }, [navigate]);
 
   return (
@@ -429,11 +385,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         currentPath,
         navigate,
         session,
-        isDemoMode,
-        toggleDemoMode,
-        setDemoMode,
         login,
-        loginDemo,
         logout,
         storeSlug,
         setStoreSlug,
