@@ -1,8 +1,13 @@
 import {
+  AtualizarStatusPedidoRequest,
   AuthSession,
   CreatePublicOrderPayload,
+  DashboardData,
+  CriarPedidoRequest,
   Order,
   OrderStatus,
+  Pedido,
+  PedidoStatus,
   Product,
   PublicMenuResponse,
   StoreConfig,
@@ -240,5 +245,42 @@ export const api = {
     );
     broadcastNewOrder(order);
     return order;
+  },
+
+  listarPedidos(status?: PedidoStatus, pageSize = 100): Promise<Pedido[]> {
+    const params = new URLSearchParams({ pageSize: String(pageSize) });
+    if (status) params.set('status', status);
+    return apiRequest<Pedido[]>(`/admin/pedidos?${params.toString()}`, { requiresAuth: true });
+  },
+
+  buscarPedido(id: number): Promise<Pedido> {
+    return apiRequest<Pedido>(`/admin/pedidos/${id}`, { requiresAuth: true });
+  },
+
+  atualizarStatusPedido(id: number, payload: AtualizarStatusPedidoRequest): Promise<Pedido> {
+    return apiRequest<Pedido>(`/admin/pedidos/${id}/status`, {
+      method: 'PATCH',
+      requiresAuth: true,
+      body: JSON.stringify(payload),
+    });
+  },
+
+  buscarDashboard(): Promise<DashboardData> {
+    return apiRequest<DashboardData>('/admin/dashboard', { requiresAuth: true });
+  },
+
+  listarPedidosPublicos(slug: string, whatsapp: string): Promise<Pedido[]> {
+    const params = new URLSearchParams({ whatsapp });
+    return apiRequest<Pedido[]>(`/loja/${encodeURIComponent(slug)}/pedidos?${params.toString()}`, {
+      tenantSlug: slug,
+    });
+  },
+
+  criarPedidoPublico(slug: string, payload: CriarPedidoRequest): Promise<Pedido> {
+    return apiRequest<Pedido>(`/loja/${encodeURIComponent(slug)}/pedidos`, {
+      method: 'POST',
+      tenantSlug: slug,
+      body: JSON.stringify(payload),
+    });
   },
 };

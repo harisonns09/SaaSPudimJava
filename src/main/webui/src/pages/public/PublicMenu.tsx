@@ -1,10 +1,26 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowRight, CakeSlice, LoaderCircle, Minus, Plus, ShoppingBag } from 'lucide-react';
 import { ResilientImage } from '../../components/ResilientImage';
 import { api } from '../../services/api';
-import { Product, PublicMenuResponse } from '../../types';
+import { CriarPedidoRequest, DeliveryType, Pedido, Product, PublicMenuResponse } from '../../types';
 import { formatCurrency, formatWeight } from '../../utils/format';
+
+interface CheckoutForm {
+    clienteNome: string;
+    clienteWhatsapp: string;
+    tipoEntrega: DeliveryType;
+    endereco: string;
+    observacoes: string;
+}
+
+const EMPTY_CHECKOUT: CheckoutForm = {
+    clienteNome: '',
+    clienteWhatsapp: '',
+    tipoEntrega: DeliveryType.RETIRADA,
+    endereco: '',
+    observacoes: '',
+};
 
 export function PublicMenuPage() {
     const { slug = '' } = useParams<{ slug: string }>();
@@ -12,6 +28,10 @@ export function PublicMenuPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [quantities, setQuantities] = useState<Record<string, number>>({});
+    const [checkout, setCheckout] = useState<CheckoutForm>(EMPTY_CHECKOUT);
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const [confirmedOrder, setConfirmedOrder] = useState<Pedido | null>(null);
 
     const loadMenu = useCallback(async () => {
         setLoading(true);
@@ -57,26 +77,43 @@ export function PublicMenuPage() {
         });
     };
 
-    const sendOrderOnWhatsApp = () => {
-        const whatsapp = menu?.loja.whatsappId.replace(/\D/g, '');
-        if (!whatsapp || selectedProducts.length === 0) return;
+    const submitOrder = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (selectedProducts.length === 0) return;
+        if (checkout.tipoEntrega === DeliveryType.ENTREGA && !checkout.endereco.trim()) {
+            setSubmitError('Informe o endereço para entrega.');
+            return;
+        }
 
-        const orderLines = selectedProducts.map(
-            (product) => `• ${quantities[product.id]}x ${product.nome} — ${formatCurrency(product.precoVenda * quantities[product.id])}`
-        );
-        const message = [
-            `Olá! Gostaria de fazer um pedido na ${menu?.loja.nomeLoja}:`,
-            '',
-            ...orderLines,
-            '',
-            `Total dos produtos: ${formatCurrency(total)}`,
-        ].join('\n');
+        const payload: CriarPedidoRequest = {
+            clienteNome: checkout.clienteNome.trim(),
+            clienteWhatsapp: checkout.clienteWhatsapp.trim(),
+            tipoEntrega: checkout.tipoEntrega,
+            endereco: checkout.tipoEntrega === DeliveryType.ENTREGA ? checkout.endereco.trim() : undefined,
+            observacoes: checkout.observacoes.trim() || undefined,
+            itens: selectedProducts.map((product) => ({
+                produtoId: Number(product.id),
+                quantidade: quantities[product.id],
+            })),
+        };
 
-        window.open(
-            `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`,
-            '_blank',
-            'noopener,noreferrer'
-        );
+        setSubmitting(true);
+        setSubmitError(null);
+        try {
+            const pedido = await api.criarPedidoPublico(slug, payload);
+            setConfirmedOrder(pedido);
+            setQuantities({});
+            setCheckout(EMPTY_CHECKOUT);
+            void loadMenu();
+        } catch (submitErr) {
+            setSubmitError(
+                submitErr instanceof Error
+                    ? submitErr.message
+                    : 'Não foi possível enviar o pedido. Tente novamente.'
+            );
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -91,6 +128,13 @@ export function PublicMenuPage() {
                             {menu?.loja.nomeLoja || 'Cardápio'}
                         </span>
                     </a>
+                    <div className="flex items-center gap-2">
+                        <a
+                            href={`/${slug}/pedido`}
+                            className="rounded-full border border-[#B45309] px-4 py-2 text-sm font-semibold text-[#B45309] transition-colors hover:bg-[#FFF7ED]"
+                        >
+                            Acompanhar pedido
+                        </a>
                     {itemCount > 0 && (
                         <a
                             href="#pedido"
@@ -100,6 +144,7 @@ export function PublicMenuPage() {
                             Meu pedido ({itemCount})
                         </a>
                     )}
+                    </div>
                 </div>
             </header>
 
@@ -246,6 +291,30 @@ export function PublicMenuPage() {
                             )}
                         </section>
 
+                        {confirmedOrder && (
+                            <section className="mt-6 rounded-2xl border border-[#BBE5CB] bg-[#F1FBF5] p-6 text-center">
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#16834A]">Pedido recebido</p>
+                                <h2 className="mt-2 font-display text-2xl font-semibold">Obrigado, {confirmedOrder.clienteNome}!</h2>
+                                <p className="mt-2 text-sm text-[#4B5D52]">
+                                    Seu código de pedido é <strong className="font-mono">{confirmedOrder.codigo}</strong>. Guarde-o para acompanhar seu pedido.
+                                </p>
+                                <p className="mt-1 text-sm text-[#4B5D52]">Total: {formatCurrency(confirmedOrder.valorTotal)}</p>
+                                <button
+                                    type="button"
+                                    onClick={() => setConfirmedOrder(null)}
+                                    className="mt-4 text-sm font-semibold text-[#16834A] underline"
+                                >
+                                    Fazer outro pedido
+                                </button>
+                                <a
+                                    href={`/${slug}/pedido?whatsapp=${encodeURIComponent(confirmedOrder.clienteWhatsapp)}`}
+                                    className="mt-4 ml-4 inline-block text-sm font-semibold text-[#16834A] underline"
+                                >
+                                    Acompanhar pedido
+                                </a>
+                            </section>
+                        )}
+
                         {itemCount > 0 && (
                             <section id="pedido" className="scroll-mt-24 rounded-2xl border border-[#EADBC8] bg-white p-5 sm:p-7">
                                 <div className="flex flex-wrap items-center justify-between gap-4">
@@ -255,23 +324,99 @@ export function PublicMenuPage() {
                                             {itemCount} item(ns) · Total {formatCurrency(total)}
                                         </p>
                                     </div>
-                                    {menu.loja.abertaParaEncomendas ? (
-                                        <button
-                                            type="button"
-                                            onClick={sendOrderOnWhatsApp}
-                                            disabled={!menu.loja.whatsappId}
-                                            className="inline-flex items-center gap-2 rounded-lg bg-[#16834A] px-4 py-3 text-sm font-semibold text-white hover:bg-[#11683A] disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            Finalizar pelo WhatsApp <ArrowRight className="h-4 w-4" />
-                                        </button>
-                                    ) : (
-                                        <p className="rounded-lg bg-[#FAF3E8] px-4 py-3 text-sm font-medium text-[#8A4B18]">
-                                            A loja está fechada para encomendas no momento.
-                                        </p>
-                                    )}
                                 </div>
+
+                                {menu.loja.abertaParaEncomendas ? (
+                                    <form onSubmit={submitOrder} className="mt-6 grid gap-4 sm:grid-cols-2">
+                                        <label className="flex flex-col gap-1.5 text-sm font-medium">
+                                            Seu nome
+                                            <input
+                                                required
+                                                value={checkout.clienteNome}
+                                                onChange={(e) => setCheckout({ ...checkout, clienteNome: e.target.value })}
+                                                className="rounded-lg border border-[#EAE1D5] px-3 py-2.5 text-sm font-normal focus:border-[#B45309] focus:outline-none"
+                                            />
+                                        </label>
+                                        <label className="flex flex-col gap-1.5 text-sm font-medium">
+                                            WhatsApp
+                                            <input
+                                                required
+                                                inputMode="tel"
+                                                value={checkout.clienteWhatsapp}
+                                                onChange={(e) => setCheckout({ ...checkout, clienteWhatsapp: e.target.value })}
+                                                className="rounded-lg border border-[#EAE1D5] px-3 py-2.5 text-sm font-normal focus:border-[#B45309] focus:outline-none"
+                                            />
+                                        </label>
+                                        <fieldset className="flex flex-col gap-1.5 text-sm font-medium sm:col-span-2">
+                                            <legend className="mb-1.5">Como prefere receber?</legend>
+                                            <div className="flex gap-3">
+                                                {[
+                                                    { value: DeliveryType.RETIRADA, label: 'Retirar na loja' },
+                                                    { value: DeliveryType.ENTREGA, label: 'Entrega' },
+                                                ].map((option) => (
+                                                    <label
+                                                        key={option.value}
+                                                        className={`flex-1 cursor-pointer rounded-lg border px-3 py-2.5 text-center text-sm font-normal ${
+                                                            checkout.tipoEntrega === option.value
+                                                                ? 'border-[#B45309] bg-[#FAF3E8] text-[#8A4B18]'
+                                                                : 'border-[#EAE1D5]'
+                                                        }`}
+                                                    >
+                                                        <input
+                                                            type="radio"
+                                                            name="tipoEntrega"
+                                                            value={option.value}
+                                                            checked={checkout.tipoEntrega === option.value}
+                                                            onChange={() => setCheckout({ ...checkout, tipoEntrega: option.value })}
+                                                            className="sr-only"
+                                                        />
+                                                        {option.label}
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </fieldset>
+                                        {checkout.tipoEntrega === DeliveryType.ENTREGA && (
+                                            <label className="flex flex-col gap-1.5 text-sm font-medium sm:col-span-2">
+                                                Endereço de entrega
+                                                <input
+                                                    required
+                                                    value={checkout.endereco}
+                                                    onChange={(e) => setCheckout({ ...checkout, endereco: e.target.value })}
+                                                    className="rounded-lg border border-[#EAE1D5] px-3 py-2.5 text-sm font-normal focus:border-[#B45309] focus:outline-none"
+                                                />
+                                            </label>
+                                        )}
+                                        <label className="flex flex-col gap-1.5 text-sm font-medium sm:col-span-2">
+                                            Observações
+                                            <textarea
+                                                rows={2}
+                                                value={checkout.observacoes}
+                                                onChange={(e) => setCheckout({ ...checkout, observacoes: e.target.value })}
+                                                className="rounded-lg border border-[#EAE1D5] px-3 py-2.5 text-sm font-normal focus:border-[#B45309] focus:outline-none"
+                                            />
+                                        </label>
+                                        {submitError && (
+                                            <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 sm:col-span-2">{submitError}</p>
+                                        )}
+                                        <div className="sm:col-span-2">
+                                            <button
+                                                type="submit"
+                                                disabled={submitting}
+                                                className="inline-flex items-center gap-2 rounded-lg bg-[#B45309] px-5 py-3 text-sm font-semibold text-white hover:bg-[#92400E] disabled:cursor-not-allowed disabled:opacity-60"
+                                            >
+                                                {submitting && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                                                Confirmar pedido <ArrowRight className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </form>
+                                ) : (
+                                    <p className="mt-6 rounded-lg bg-[#FAF3E8] px-4 py-3 text-sm font-medium text-[#8A4B18]">
+                                        A loja está fechada para encomendas no momento.
+                                    </p>
+                                )}
                             </section>
                         )}
+
                     </>
                 ) : null}
             </main>

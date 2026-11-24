@@ -5,6 +5,7 @@ import {
     LogOut,
     Menu,
     Package,
+    ShoppingBag,
     Sparkles,
     X,
 } from 'lucide-react';
@@ -13,12 +14,14 @@ import { useAuth } from '../../context/AuthContext';
 
 const navigation = [
     { label: 'Dashboard', path: '/admin', icon: LayoutDashboard },
+    { label: 'Pedidos', path: '/admin/pedidos', icon: ShoppingBag },
     { label: 'Produtos & Estoque', path: '/admin/produtos', icon: Package },
     { label: 'Agente de IA & Loja', path: '/admin/configuracoes', icon: Sparkles },
 ];
 
 const pageTitles: Record<string, string> = {
     '/admin': 'Visão geral',
+    '/admin/pedidos': 'Pedidos',
     '/admin/produtos': 'Produtos & Estoque',
     '/admin/configuracoes': 'Agente de IA & Configurações da Loja',
 };

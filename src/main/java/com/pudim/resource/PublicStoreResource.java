@@ -1,20 +1,16 @@
 package com.pudim.resource;
 
-import com.pudim.model.Order;
-import com.pudim.model.PublicMenuResponse;
 import com.pudim.model.CreateOrderRequest;
 import com.pudim.model.OrderResponse;
+import com.pudim.model.PublicMenuResponse;
 import com.pudim.service.PublicStoreService;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+
+import java.util.List;
 
 @Path("/api/loja")
 @Consumes(MediaType.APPLICATION_JSON)
@@ -28,6 +24,13 @@ public class PublicStoreResource {
     @Path("/{slug}/cardapio")
     public PublicMenuResponse getPublicMenu(@PathParam("slug") String slug) {
         return publicStoreService.getMenu(slug);
+    }
+
+    @GET
+    @Path("/{slug}/pedidos")
+    public List<OrderResponse> getPublicOrders(@PathParam("slug") String slug,
+                                               @QueryParam("whatsapp") String whatsapp) {
+        return publicStoreService.getOrdersTracking(slug, whatsapp);
     }
 
     @POST

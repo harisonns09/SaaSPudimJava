@@ -7,10 +7,8 @@ import com.pudim.multitenancy.TenantContext;
 import com.pudim.repository.OrderRepository;
 import com.pudim.repository.OrderStatusHistoryRepository;
 import com.pudim.repository.ProductRepository;
+import com.pudim.repository.StoreConfigRepository;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
-import io.quarkus.panache.common.Sort;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -31,6 +29,9 @@ public class OrderService {
 
     @Inject
     ProductRepository productRepository;
+
+    @Inject
+    StoreConfigRepository storeConfigRepository;
 
     @Inject
     TenantContext tenantContext;
@@ -67,7 +68,12 @@ public class OrderService {
             );
             ordenados.add(orderItem);
             total = total.add(orderItem.getSubtotal());
+
+            product.estoqueAtual -= item.quantidade;
         }
+
+        BigDecimal taxaEntrega = calcularTaxaEntrega(tenantId, request.tipoEntrega);
+        total = total.add(taxaEntrega);
 
         Order order = new Order();
         order.tenantId = tenantId;
@@ -76,9 +82,7 @@ public class OrderService {
         order.clienteWhatsapp = request.clienteWhatsapp;
         order.clienteEmail = request.clienteEmail;
         order.status = OrderStatus.PENDENTE;
-        order.itens = new JsonArray(ordenados.stream()
-                .map(item -> JsonObject.mapFrom(item))
-                .collect(Collectors.toList()));
+        order.itens = ordenados;
         order.valorTotal = total;
         order.tipoEntrega = request.tipoEntrega;
         order.endereco = request.endereco;
@@ -91,7 +95,7 @@ public class OrderService {
         statusHistoryRepository.persist(new OrderStatusHistory(
                 tenantId,
                 order.id,
-                null,
+                OrderStatus.PENDENTE,
                 OrderStatus.PENDENTE,
                 "Pedido criado"
         ));
@@ -113,6 +117,10 @@ public class OrderService {
         if (!ehTransicaoValida(statusAnterior, request.novoStatus)) {
             throw new ValidationException("Não é permitido mudar de " + statusAnterior + 
                     " para " + request.novoStatus);
+        }
+
+        if (request.novoStatus == OrderStatus.CANCELADO) {
+            restaurarEstoque(order);
         }
 
         order.status = request.novoStatus;
@@ -149,6 +157,7 @@ public class OrderService {
         }
 
         OrderStatus statusAnterior = order.status;
+        restaurarEstoque(order);
         order.status = OrderStatus.CANCELADO;
         order.atualizadoEm = LocalDateTime.now();
 
@@ -226,7 +235,7 @@ public class OrderService {
         return orderRepository.count(queryBuilder.toString(), params.toArray());
     }
 
-    public List<OrderStatusHistory> getOrderStatusHistory(String tenantId, Long orderId) {
+    public List<OrderStatusHistoryResponse> getOrderStatusHistory(String tenantId, Long orderId) {
         tenantContext.setTenantId(tenantId);
 
         Order order = orderRepository.findByIdOptional(orderId)
@@ -234,17 +243,50 @@ public class OrderService {
 
         validarTenantId(order.tenantId, tenantId);
 
-        return statusHistoryRepository.findByOrderId(orderId);
+        return statusHistoryRepository.findByOrderId(orderId).stream()
+                .map(OrderStatusHistoryResponse::new)
+                .collect(Collectors.toList());
+    }
+
+    private void restaurarEstoque(Order order) {
+        if (order.itens == null) {
+            return;
+        }
+        for (OrderItem item : order.itens) {
+            productRepository.findByIdOptional(item.produtoId)
+                    .ifPresent(product -> product.estoqueAtual += item.quantidade);
+        }
+    }
+
+    private BigDecimal calcularTaxaEntrega(String tenantId, String tipoEntrega) {
+        if (!"ENTREGA".equalsIgnoreCase(tipoEntrega)) {
+            return BigDecimal.ZERO;
+        }
+        return storeConfigRepository.findByTenantId(tenantId)
+                .map(config -> config.taxaEntregaPadrao != null ? config.taxaEntregaPadrao : BigDecimal.ZERO)
+                .orElse(BigDecimal.ZERO);
+    }
+
+    public List<OrderResponse> getOrdersByWhatsapp(String tenantId, String whatsapp) {
+        tenantContext.setTenantId(tenantId);
+
+        String whatsappInformado = somenteDigitos(whatsapp);
+        if (whatsappInformado.isEmpty()) {
+            return List.of();
+        }
+
+        return orderRepository.find("tenantId = ?1 ORDER BY criadoEm DESC", tenantId).list().stream()
+                .filter(order -> whatsappInformado.equals(somenteDigitos(order.clienteWhatsapp)))
+                .map(this::toOrderResponse)
+                .toList();
+    }
+
+    private String somenteDigitos(String valor) {
+        return valor == null ? "" : valor.replaceAll("\\D", "");
     }
 
     private OrderResponse toOrderResponse(Order order) {
-        List<OrderItem> itens = new ArrayList<>();
-        if (order.itens != null) {
-            for (Object obj : order.itens) {
-                JsonObject json = (JsonObject) obj;
-                itens.add(json.mapTo(OrderItem.class));
-            }
-        }
+        List<OrderItem> itens = order.itens != null ? new ArrayList<>(order.itens) : new ArrayList<>();
         return new OrderResponse(order, itens);
     }
 
@@ -253,10 +295,9 @@ public class OrderService {
         String data = String.format("%04d%02d%02d", 
                 agora.getYear(), agora.getMonthValue(), agora.getDayOfMonth());
         
-        long count = orderRepository.countByCodigo() + 1;
-        String numero = String.format("%06d", count % 1000000);
-        
-        return "PD-" + data + "-" + numero;
+        String sufixo = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+
+        return "PD-" + data + "-" + sufixo;
     }
 
     private boolean ehTransicaoValida(OrderStatus de, OrderStatus para) {

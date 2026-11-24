@@ -116,3 +116,85 @@ export interface PublicMenuResponse {
   >;
   produtos: Product[];
 }
+
+// Contrato atual da API de pedidos (espelha OrderResponse / CreateOrderRequest / UpdateOrderStatusRequest do Quarkus).
+export type PedidoStatus =
+  | 'PENDENTE'
+  | 'EM_PREPARO'
+  | 'PRONTO_PARA_ENTREGA'
+  | 'SAIU_PARA_ENTREGA'
+  | 'ENTREGUE'
+  | 'CANCELADO';
+
+export interface PedidoItem {
+  produtoId: number;
+  produtoNome: string;
+  quantidade: number;
+  preco: number;
+  subtotal: number;
+}
+
+export interface Pedido {
+  id: number;
+  codigo: string;
+  clienteNome: string;
+  clienteWhatsapp: string;
+  clienteEmail?: string | null;
+  status: PedidoStatus;
+  itens: PedidoItem[];
+  valorTotal: number;
+  tipoEntrega: DeliveryType;
+  endereco?: string | null;
+  observacoes?: string | null;
+  criadoEm: string;
+  atualizadoEm?: string | null;
+}
+
+export interface CriarPedidoItemRequest {
+  produtoId: number;
+  quantidade: number;
+}
+
+export interface CriarPedidoRequest {
+  clienteNome: string;
+  clienteWhatsapp: string;
+  clienteEmail?: string;
+  tipoEntrega: DeliveryType;
+  endereco?: string;
+  observacoes?: string;
+  itens: CriarPedidoItemRequest[];
+}
+
+export interface AtualizarStatusPedidoRequest {
+  novoStatus: PedidoStatus;
+  observacoes?: string;
+}
+
+// Espelha DashboardResponse do Quarkus (GET /api/admin/dashboard).
+export interface DashboardTopProduto {
+  produtoId: number;
+  produtoNome: string;
+  quantidade: number;
+  faturamento: number;
+}
+
+export interface DashboardPedidoResumo {
+  id: number;
+  codigo: string;
+  clienteNome: string;
+  status: PedidoStatus;
+  valorTotal: number;
+  criadoEm: string;
+}
+
+export interface DashboardData {
+  totalPedidos: number;
+  pedidosHoje: number;
+  pedidosAtivos: number;
+  faturamentoTotal: number;
+  faturamentoHoje: number;
+  ticketMedio: number;
+  pedidosPorStatus: Record<PedidoStatus, number>;
+  topProdutos: DashboardTopProduto[];
+  pedidosRecentes: DashboardPedidoResumo[];
+}

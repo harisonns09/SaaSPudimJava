@@ -1,10 +1,10 @@
 package com.pudim.service;
 
-import com.pudim.model.*;
 import com.pudim.exception.ResourceNotFoundException;
+import com.pudim.model.*;
 import com.pudim.multitenancy.TenantContext;
-import com.pudim.repository.StoreConfigRepository;
 import com.pudim.repository.ProductRepository;
+import com.pudim.repository.StoreConfigRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -42,6 +42,13 @@ public class PublicStoreService {
         String tenantId = storeConfigRepository.findTenantIdBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Loja não encontrada."));
         
+        tenantContext.setTenantId(tenantId);
         return orderService.createOrder(tenantId, request);
+    }
+
+    public List<OrderResponse> getOrdersTracking(String slug, String whatsapp) {
+        String tenantId = storeConfigRepository.findTenantIdBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Loja não encontrada."));
+        return orderService.getOrdersByWhatsapp(tenantId, whatsapp);
     }
 }
