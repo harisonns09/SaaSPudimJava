@@ -1,0 +1,40 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AdminLayout } from './pages/admin/_layout';
+import { DashboardPage } from './pages/admin/Dashboard';
+import { ProductsPage } from './pages/admin/Products';
+import { SettingsPage } from './pages/admin/Settings';
+import { LoginPage } from './pages/Login';
+import { RegisterPage } from './pages/Register'; // Importa a nova página
+import { PublicMenuPage } from './pages/public/PublicMenu';
+import { AuthProvider, useAuth } from './context/AuthContext';
+
+function PrivateRoute({ children }: { children: React.ReactNode }) {
+    const { isAuthenticated } = useAuth();
+    return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+}
+
+export function App() {
+    return (
+        <BrowserRouter>
+            <AuthProvider>
+                <Routes>
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} /> {/* Adiciona a nova rota */}
+
+                    <Route
+                        path="/admin"
+                        element={<PrivateRoute><AdminLayout /></PrivateRoute>}
+                    >
+                        <Route index element={<DashboardPage />} />
+                        <Route path="produtos" element={<ProductsPage />} />
+                        <Route path="configuracoes" element={<SettingsPage />} />
+                    </Route>
+
+                    <Route path="/:slug" element={<PublicMenuPage />} />
+
+                    <Route path="*" element={<Navigate to="/login" />} />
+                </Routes>
+            </AuthProvider>
+        </BrowserRouter>
+    );
+}
