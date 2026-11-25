@@ -1,11 +1,13 @@
 package com.pudim.service;
 
+import com.pudim.exception.ConflictException;
+import com.pudim.exception.ValidationException;
 import com.pudim.model.LoginRequest;
 import com.pudim.model.RegistrationRequest;
 import com.pudim.model.StoreConfig;
 import com.pudim.multitenancy.TenantContext;
 import com.pudim.repository.StoreConfigRepository;
-import com.pudim.exception.ValidationException;
+import com.pudim.repository.UserRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -24,6 +26,9 @@ public class AuthService {
     StoreConfigRepository storeConfigRepository;
 
     @Inject
+    UserRepository userRepository;
+
+    @Inject
     TenantContext tenantContext;
 
     public String login(LoginRequest request) {
@@ -35,6 +40,10 @@ public class AuthService {
         if (request == null || isBlank(request.getStoreName())
                 || isBlank(request.getEmail()) || isBlank(request.getPassword())) {
             throw new ValidationException("Nome da loja, e-mail e senha são obrigatórios.");
+        }
+
+        if (userRepository.findByEmail(request.getEmail().trim()).isPresent()) {
+            throw new ConflictException("Já existe uma conta com este e-mail.");
         }
 
         String tenantId = UUID.randomUUID().toString();
