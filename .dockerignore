@@ -1,5 +1,7 @@
-*
-!target/*-runner
-!target/*-runner.jar
-!target/lib/*
-!target/quarkus-app/*
+.git
+.gitignore
+.mvn
+target
+src/main/webui/node_modules
+src/main/webui/dist
+*.md
