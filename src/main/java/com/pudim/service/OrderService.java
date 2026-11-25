@@ -12,14 +12,27 @@ import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class OrderService {
+
+    public static final String PAGAMENTO_NAO_APLICA = "NAO_APLICA";
+    public static final String PAGAMENTO_AGUARDANDO = "AGUARDANDO";
+    public static final String PAGAMENTO_PAGO = "PAGO";
+
+    @ConfigProperty(name = "app.public-url")
+    String appPublicUrl;
+
+    @Inject
+    InfinitePayClient infinitePayClient;
 
     @Inject
     OrderRepository orderRepository;
@@ -100,7 +113,78 @@ public class OrderService {
                 "Pedido criado"
         ));
 
+        StoreConfig store = storeConfigRepository.findByTenantId(tenantId).orElse(null);
+        if (store != null && store.infinitepayHandle != null && !store.infinitepayHandle.isBlank()) {
+            order.pagamentoStatus = PAGAMENTO_AGUARDANDO;
+            order.pagamentoUrl = criarCobrancaInfinitePay(store, order, ordenados);
+        }
+
         return new OrderResponse(order, ordenados);
+    }
+
+    private String criarCobrancaInfinitePay(StoreConfig store, Order order, List<OrderItem> itens) {
+        List<InfinitePayClient.ItemCobranca> cobrancas = new ArrayList<>();
+        for (OrderItem item : itens) {
+            cobrancas.add(new InfinitePayClient.ItemCobranca(item.quantidade, item.preco, item.produtoNome));
+        }
+
+        BigDecimal somaItens = itens.stream().map(OrderItem::getSubtotal).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal taxaEntrega = order.valorTotal.subtract(somaItens);
+        if (taxaEntrega.signum() > 0) {
+            cobrancas.add(new InfinitePayClient.ItemCobranca(1, taxaEntrega, "Taxa de entrega"));
+        }
+
+        String whatsappCodificado = URLEncoder.encode(
+                order.clienteWhatsapp == null ? "" : order.clienteWhatsapp, StandardCharsets.UTF_8);
+        String redirectUrl = appPublicUrl + "/" + store.slug + "/pedido?whatsapp=" + whatsappCodificado;
+        String webhookUrl = appPublicUrl + "/api/loja/" + store.slug + "/pagamentos/infinitepay/webhook";
+
+        try {
+            return infinitePayClient.criarLink(store.infinitepayHandle, order.codigo, cobrancas, redirectUrl, webhookUrl);
+        } catch (IllegalStateException e) {
+            throw new ValidationException("Não foi possível gerar o link de pagamento. Tente novamente.");
+        }
+    }
+
+    @Transactional
+    public void confirmarPagamentoInfinitePay(String tenantId, String orderNsu, String transactionNsu, String invoiceSlug) {
+        tenantContext.setTenantId(tenantId);
+
+        Order order = orderRepository.findByCodigo(orderNsu)
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido não encontrado"));
+        validarTenantId(order.tenantId, tenantId);
+
+        if (PAGAMENTO_PAGO.equals(order.pagamentoStatus)) {
+            return;
+        }
+
+        StoreConfig store = storeConfigRepository.findByTenantId(tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Loja não encontrada"));
+        if (store.infinitepayHandle == null || store.infinitepayHandle.isBlank()) {
+            throw new ValidationException("Loja sem handle InfinitePay configurado");
+        }
+
+        // O webhook não é assinado: a confirmação precisa vir da consulta à API.
+        InfinitePayClient.PagamentoConsultado consulta = infinitePayClient.consultarPagamento(
+                store.infinitepayHandle, orderNsu, transactionNsu, invoiceSlug);
+        if (!consulta.pago()) {
+            // Eventos como canceled/refunded/payment_failed não confirmam pagamento; não é erro.
+            return;
+        }
+
+        order.pagamentoStatus = PAGAMENTO_PAGO;
+        order.pagamentoTransactionNsu = transactionNsu;
+        order.pagamentoInvoiceSlug = invoiceSlug;
+        order.pagamentoValorPago = consulta.valorPago();
+        order.pagoEm = LocalDateTime.now();
+
+        statusHistoryRepository.persist(new OrderStatusHistory(
+                tenantId,
+                order.id,
+                order.status,
+                order.status,
+                "Pagamento confirmado via InfinitePay"
+        ));
     }
 
     @Transactional
@@ -304,8 +388,7 @@ public class OrderService {
         Map<OrderStatus, Set<OrderStatus>> transicoes = new HashMap<>();
         transicoes.put(OrderStatus.PENDENTE, Set.of(OrderStatus.EM_PREPARO, OrderStatus.CANCELADO));
         transicoes.put(OrderStatus.EM_PREPARO, Set.of(OrderStatus.PRONTO_PARA_ENTREGA, OrderStatus.CANCELADO));
-        transicoes.put(OrderStatus.PRONTO_PARA_ENTREGA, Set.of(OrderStatus.SAIU_PARA_ENTREGA, OrderStatus.CANCELADO));
-        transicoes.put(OrderStatus.SAIU_PARA_ENTREGA, Set.of(OrderStatus.ENTREGUE, OrderStatus.CANCELADO));
+        transicoes.put(OrderStatus.PRONTO_PARA_ENTREGA, Set.of(OrderStatus.ENTREGUE, OrderStatus.CANCELADO));
         transicoes.put(OrderStatus.ENTREGUE, new HashSet<>());
         transicoes.put(OrderStatus.CANCELADO, new HashSet<>());
 

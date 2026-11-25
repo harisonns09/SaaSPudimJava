@@ -5,13 +5,12 @@ import { api } from '../../services/api';
 import { DeliveryType, Pedido, PedidoStatus } from '../../types';
 import { formatCurrency } from '../../utils/format';
 
-const TIMELINE: PedidoStatus[] = ['PENDENTE', 'EM_PREPARO', 'PRONTO_PARA_ENTREGA', 'SAIU_PARA_ENTREGA', 'ENTREGUE'];
+const TIMELINE: PedidoStatus[] = ['PENDENTE', 'EM_PREPARO', 'PRONTO_PARA_ENTREGA', 'ENTREGUE'];
 
 const STATUS_LABEL: Record<PedidoStatus, string> = {
   PENDENTE: 'Pedido recebido',
   EM_PREPARO: 'Em preparo',
   PRONTO_PARA_ENTREGA: 'Pronto',
-  SAIU_PARA_ENTREGA: 'Saiu para entrega',
   ENTREGUE: 'Entregue',
   CANCELADO: 'Cancelado',
 };
@@ -20,7 +19,6 @@ const STATUS_HINT: Record<PedidoStatus, string> = {
   PENDENTE: 'Recebemos seu pedido e vamos começar em breve.',
   EM_PREPARO: 'Seu pudim está sendo preparado com carinho.',
   PRONTO_PARA_ENTREGA: 'Seu pedido está pronto para retirada ou entrega.',
-  SAIU_PARA_ENTREGA: 'Seu pedido está a caminho!',
   ENTREGUE: 'Pedido finalizado. Obrigado pela preferência!',
   CANCELADO: 'Este pedido foi cancelado. Entre em contato com a loja se tiver dúvidas.',
 };
@@ -96,6 +94,19 @@ function PedidoCard({ pedido }: { pedido: Pedido }) {
         </div>
         {pedido.endereco && <p className="mt-3 text-sm text-[#4B5D52]">Endereço: {pedido.endereco}</p>}
         {pedido.observacoes && <p className="mt-1 text-sm text-[#4B5D52]">Obs.: {pedido.observacoes}</p>}
+        {pedido.pagamentoStatus === 'PAGO' && (
+          <p className="mt-3 rounded-xl bg-[#E8F7EE] px-4 py-3 text-sm font-semibold text-[#16834A]">
+            Pagamento confirmado{pedido.pagoEm ? ` em ${formatDateTime(pedido.pagoEm)}` : ''}.
+          </p>
+        )}
+        {pedido.pagamentoStatus === 'AGUARDANDO' && pedido.pagamentoUrl && (
+          <a
+            href={pedido.pagamentoUrl}
+            className="mt-4 flex w-full items-center justify-center rounded-xl bg-[#16834A] px-4 py-3 text-sm font-semibold text-white"
+          >
+            Pagar agora
+          </a>
+        )}
       </div>
     </article>
   );

@@ -8,7 +8,6 @@ const STATUS_LABELS: Record<PedidoStatus, string> = {
     PENDENTE: 'Pendente',
     EM_PREPARO: 'Em preparo',
     PRONTO_PARA_ENTREGA: 'Pronto',
-    SAIU_PARA_ENTREGA: 'Saiu para entrega',
     ENTREGUE: 'Entregue',
     CANCELADO: 'Cancelado',
 };
@@ -17,7 +16,6 @@ const STATUS_COLORS: Record<PedidoStatus, string> = {
     PENDENTE: 'bg-[#FEF3C7] text-[#B45309]',
     EM_PREPARO: 'bg-[#DBEAFE] text-[#1D4ED8]',
     PRONTO_PARA_ENTREGA: 'bg-[#EDE9FE] text-[#6D28D9]',
-    SAIU_PARA_ENTREGA: 'bg-[#E0F2FE] text-[#0369A1]',
     ENTREGUE: 'bg-[#DCFCE7] text-[#166534]',
     CANCELADO: 'bg-[#FEE2E2] text-[#991B1B]',
 };

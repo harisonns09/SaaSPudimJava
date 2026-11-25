@@ -51,4 +51,21 @@ public class Order extends PanacheEntity {
 
     @Column(nullable = false)
     public LocalDateTime atualizadoEm = LocalDateTime.now();
+
+    // Pagamento (InfinitePay): AGUARDANDO, PAGO ou NAO_APLICA (loja sem handle configurado).
+    @Column(nullable = false, length = 20, columnDefinition = "varchar(20) not null default 'NAO_APLICA'")
+    public String pagamentoStatus = "NAO_APLICA";
+
+    @Column(length = 1000)
+    public String pagamentoUrl;
+
+    @Column(length = 100)
+    public String pagamentoInvoiceSlug;
+
+    @Column(length = 100)
+    public String pagamentoTransactionNsu;
+
+    public BigDecimal pagamentoValorPago;
+
+    public LocalDateTime pagoEm;
 }

@@ -11,6 +11,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.util.List;
+import java.util.Map;
 
 @Path("/api/loja")
 @Consumes(MediaType.APPLICATION_JSON)
@@ -38,5 +39,12 @@ public class PublicStoreResource {
     public Response createPublicOrder(@PathParam("slug") String slug, @Valid CreateOrderRequest request) {
         OrderResponse created = publicStoreService.createOrder(slug, request);
         return Response.status(Response.Status.CREATED).entity(created).build();
+    }
+
+    @POST
+    @Path("/{slug}/pagamentos/infinitepay/webhook")
+    public Response infinitePayWebhook(@PathParam("slug") String slug, Map<String, Object> payload) {
+        publicStoreService.receberWebhookInfinitePay(slug, payload);
+        return Response.ok().build();
     }
 }

@@ -101,6 +101,10 @@ export function PublicMenuPage() {
         setSubmitError(null);
         try {
             const pedido = await api.criarPedidoPublico(slug, payload);
+            if (pedido.pagamentoStatus === 'AGUARDANDO' && pedido.pagamentoUrl) {
+                window.location.href = pedido.pagamentoUrl;
+                return;
+            }
             setConfirmedOrder(pedido);
             setQuantities({});
             setCheckout(EMPTY_CHECKOUT);

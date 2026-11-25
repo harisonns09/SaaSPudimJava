@@ -27,6 +27,9 @@ public class StoreConfig extends PanacheEntity {
 
     public boolean abertaParaEncomendas = true;
 
+    // InfinitePay Checkout: InfiniteTag da loja (sem o "$"). Se nulo, pedidos são criados sem cobrança online.
+    public String infinitepayHandle;
+
     // Outros campos do frontend que podem ser adicionados:
     // public String tempoPreparoMedio;
     // public String enderecoRetirada;

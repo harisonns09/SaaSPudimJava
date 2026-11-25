@@ -18,6 +18,10 @@ public class OrderResponse {
     public String observacoes;
     public LocalDateTime criadoEm;
     public LocalDateTime atualizadoEm;
+    public String pagamentoStatus;
+    public String pagamentoUrl;
+    public BigDecimal pagamentoValorPago;
+    public LocalDateTime pagoEm;
 
     public OrderResponse() {}
 
@@ -35,5 +39,9 @@ public class OrderResponse {
         this.observacoes = order.observacoes;
         this.criadoEm = order.criadoEm;
         this.atualizadoEm = order.atualizadoEm;
+        this.pagamentoStatus = order.pagamentoStatus;
+        this.pagamentoUrl = order.pagamentoUrl;
+        this.pagamentoValorPago = order.pagamentoValorPago;
+        this.pagoEm = order.pagoEm;
     }
 }

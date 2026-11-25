@@ -122,7 +122,6 @@ export type PedidoStatus =
   | 'PENDENTE'
   | 'EM_PREPARO'
   | 'PRONTO_PARA_ENTREGA'
-  | 'SAIU_PARA_ENTREGA'
   | 'ENTREGUE'
   | 'CANCELADO';
 
@@ -148,6 +147,10 @@ export interface Pedido {
   observacoes?: string | null;
   criadoEm: string;
   atualizadoEm?: string | null;
+  pagamentoStatus?: 'NAO_APLICA' | 'AGUARDANDO' | 'PAGO' | null;
+  pagamentoUrl?: string | null;
+  pagamentoValorPago?: number | null;
+  pagoEm?: string | null;
 }
 
 export interface CriarPedidoItemRequest {

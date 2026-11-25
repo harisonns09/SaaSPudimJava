@@ -1,6 +1,7 @@
 package com.pudim.service;
 
 import com.pudim.exception.ResourceNotFoundException;
+import com.pudim.exception.ValidationException;
 import com.pudim.model.*;
 import com.pudim.multitenancy.TenantContext;
 import com.pudim.repository.ProductRepository;
@@ -10,6 +11,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @ApplicationScoped
 public class PublicStoreService {
@@ -50,5 +52,24 @@ public class PublicStoreService {
         String tenantId = storeConfigRepository.findTenantIdBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Loja não encontrada."));
         return orderService.getOrdersByWhatsapp(tenantId, whatsapp);
+    }
+
+    public void receberWebhookInfinitePay(String slug, Map<String, Object> payload) {
+        String tenantId = storeConfigRepository.findTenantIdBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Loja não encontrada."));
+
+        String orderNsu = textoObrigatorio(payload, "order_nsu");
+        String transactionNsu = textoObrigatorio(payload, "transaction_nsu");
+        String invoiceSlug = textoObrigatorio(payload, "invoice_slug");
+
+        orderService.confirmarPagamentoInfinitePay(tenantId, orderNsu, transactionNsu, invoiceSlug);
+    }
+
+    private String textoObrigatorio(Map<String, Object> payload, String campo) {
+        Object valor = payload.get(campo);
+        if (valor == null || valor.toString().isBlank()) {
+            throw new ValidationException("Campo obrigatório ausente no webhook: " + campo);
+        }
+        return valor.toString();
     }
 }

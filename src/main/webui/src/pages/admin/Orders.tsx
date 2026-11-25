@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ArrowRight, LoaderCircle, RefreshCw, XCircle } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowRight, LoaderCircle, RefreshCw, Search, XCircle } from 'lucide-react';
 import { api } from '../../services/api';
 import { DeliveryType, Pedido, PedidoStatus } from '../../types';
 import { formatCurrency } from '../../utils/format';
@@ -7,12 +7,11 @@ import { formatCurrency } from '../../utils/format';
 const COLUMNS: { status: PedidoStatus; label: string; next?: PedidoStatus; nextLabel?: string }[] = [
     { status: 'PENDENTE', label: 'Pendente', next: 'EM_PREPARO', nextLabel: 'Iniciar preparo' },
     { status: 'EM_PREPARO', label: 'Em preparo', next: 'PRONTO_PARA_ENTREGA', nextLabel: 'Marcar pronto' },
-    { status: 'PRONTO_PARA_ENTREGA', label: 'Pronto', next: 'SAIU_PARA_ENTREGA', nextLabel: 'Saiu para entrega' },
-    { status: 'SAIU_PARA_ENTREGA', label: 'Saiu para entrega', next: 'ENTREGUE', nextLabel: 'Marcar entregue' },
+    { status: 'PRONTO_PARA_ENTREGA', label: 'Pronto', next: 'ENTREGUE', nextLabel: 'Marcar entregue' },
     { status: 'ENTREGUE', label: 'Entregue' },
 ];
 
-const CANCELABLE: PedidoStatus[] = ['PENDENTE', 'EM_PREPARO', 'PRONTO_PARA_ENTREGA', 'SAIU_PARA_ENTREGA'];
+const CANCELABLE: PedidoStatus[] = ['PENDENTE', 'EM_PREPARO', 'PRONTO_PARA_ENTREGA'];
 const REFRESH_INTERVAL_MS = 30_000;
 
 interface Feedback {
@@ -24,12 +23,33 @@ function errorMessage(error: unknown, fallback: string): string {
     return error instanceof Error ? error.message : fallback;
 }
 
+function normalizeText(value: string): string {
+    return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
 export function OrdersPage() {
     const [pedidos, setPedidos] = useState<Pedido[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [feedback, setFeedback] = useState<Feedback | null>(null);
     const [updatingId, setUpdatingId] = useState<number | null>(null);
+    const [busca, setBusca] = useState('');
+
+    const pedidosFiltrados = useMemo(() => {
+        const termo = normalizeText(busca);
+        const digitos = busca.replace(/\D/g, '');
+        if (!termo) return pedidos;
+        return pedidos.filter((p) => {
+            const nome = normalizeText(p.clienteNome);
+            const codigo = normalizeText(p.codigo);
+            const whatsapp = p.clienteWhatsapp.replace(/\D/g, '');
+            return (
+                nome.includes(termo) ||
+                codigo.includes(termo) ||
+                (digitos.length > 0 && whatsapp.includes(digitos))
+            );
+        });
+    }, [pedidos, busca]);
 
     const loadPedidos = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
@@ -78,18 +98,36 @@ export function OrdersPage() {
 
     return (
         <div className="space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-[#7A6658]">
                     {pedidos.length} pedido(s) ativos · {cancelados} cancelado(s)
                 </p>
                 <button
                     type="button"
                     onClick={() => void loadPedidos()}
-                    className="inline-flex items-center gap-2 rounded-lg border border-[#EAE1D5] bg-white px-3 py-2 text-sm font-medium text-[#5C4A3E] hover:bg-[#FAF7F2]"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#EAE1D5] bg-white px-3 py-2 text-sm font-medium text-[#5C4A3E] hover:bg-[#FAF7F2] sm:w-auto"
                 >
                     <RefreshCw className="h-4 w-4" /> Atualizar
                 </button>
             </div>
+
+            <div className="relative w-full lg:max-w-lg">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A0907F]" />
+                <input
+                    type="search"
+                    value={busca}
+                    onChange={(event) => setBusca(event.target.value)}
+                    placeholder="Buscar por nome, código ou WhatsApp"
+                    aria-label="Buscar pedidos"
+                    className="w-full rounded-lg border border-[#EAE1D5] bg-white py-2 pl-9 pr-3 text-sm text-[#291D16] placeholder:text-[#A0907F] focus:border-[#B45309] focus:outline-none"
+                />
+            </div>
+
+            {busca && (
+                <p className="text-xs text-[#7A6658]">
+                    {pedidosFiltrados.length} resultado(s) para “{busca}”
+                </p>
+            )}
 
             {feedback && (
                 <div
@@ -115,14 +153,14 @@ export function OrdersPage() {
                     <LoaderCircle className="h-4 w-4 animate-spin" /> Carregando pedidos...
                 </div>
             ) : (
-                <div className="grid gap-4 overflow-x-auto pb-2 xl:grid-cols-5">
+                <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                     {COLUMNS.map((column) => {
-                        const cards = pedidos.filter((p) => p.status === column.status);
+                        const cards = pedidosFiltrados.filter((p) => p.status === column.status);
                         return (
                             <section
                                 key={column.status}
                                 aria-label={column.label}
-                                className="min-w-[240px] rounded-xl border border-[#EAE1D5] bg-white p-3"
+                                className="flex min-w-0 flex-col rounded-xl border border-[#EAE1D5] bg-white p-3"
                             >
                                 <header className="mb-3 flex items-center justify-between">
                                     <h2 className="font-display text-sm font-semibold text-[#291D16]">{column.label}</h2>
