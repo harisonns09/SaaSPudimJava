@@ -46,6 +46,13 @@ public class Order extends PanacheEntity {
     @Column(length = 1000)
     public String observacoes;
 
+    // Aceite dos termos e política de privacidade (LGPD: comprovação do consentimento)
+    @Column(name = "aceite_termos", nullable = false, updatable = false)
+    public boolean aceiteTermos;
+
+    @Column(name = "aceite_termos_em", updatable = false)
+    public LocalDateTime aceiteTermosEm;
+
     @Column(nullable = false, updatable = false)
     public LocalDateTime criadoEm = LocalDateTime.now();
 

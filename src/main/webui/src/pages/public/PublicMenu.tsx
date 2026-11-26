@@ -13,6 +13,7 @@ interface CheckoutForm {
     tipoEntrega: DeliveryType;
     endereco: string;
     observacoes: string;
+    aceiteTermos: boolean;
 }
 
 const EMPTY_CHECKOUT: CheckoutForm = {
@@ -21,6 +22,7 @@ const EMPTY_CHECKOUT: CheckoutForm = {
     tipoEntrega: DeliveryType.RETIRADA,
     endereco: '',
     observacoes: '',
+    aceiteTermos: false,
 };
 
 export function PublicMenuPage() {
@@ -97,6 +99,7 @@ export function PublicMenuPage() {
             tipoEntrega: checkout.tipoEntrega,
             endereco: checkout.tipoEntrega === DeliveryType.ENTREGA ? checkout.endereco.trim() : undefined,
             observacoes: checkout.observacoes.trim() || undefined,
+            aceiteTermos: checkout.aceiteTermos,
             itens: selectedProducts.map((product) => ({
                 produtoId: Number(product.id),
                 quantidade: quantities[product.id],
@@ -414,13 +417,25 @@ export function PublicMenuPage() {
                                                 className="rounded-lg border border-[#EAE1D5] px-3 py-2.5 text-sm font-normal focus:border-[#B45309] focus:outline-none"
                                             />
                                         </label>
+                                        <label className="flex items-start gap-2 text-sm text-[#5C4A3E] sm:col-span-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={checkout.aceiteTermos}
+                                                onChange={(e) => setCheckout({ ...checkout, aceiteTermos: e.target.checked })}
+                                                className="mt-1"
+                                            />
+                                            <span>
+                                                Li e aceito os <a href="/termos" className="font-semibold text-[#B45309] underline">termos de uso</a> e a{' '}
+                                                <a href="/privacidade" className="font-semibold text-[#B45309] underline">política de privacidade</a>, incluindo o uso dos meus dados para este pedido.
+                                            </span>
+                                        </label>
                                         {submitError && (
                                             <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 sm:col-span-2">{submitError}</p>
                                         )}
                                         <div className="sm:col-span-2">
                                             <button
                                                 type="submit"
-                                                disabled={submitting}
+                                                disabled={submitting || !checkout.aceiteTermos}
                                                 className="inline-flex items-center gap-2 rounded-lg bg-[#B45309] px-5 py-3 text-sm font-semibold text-white hover:bg-[#92400E] disabled:cursor-not-allowed disabled:opacity-60"
                                             >
                                                 {submitting && <LoaderCircle className="h-4 w-4 animate-spin" />}

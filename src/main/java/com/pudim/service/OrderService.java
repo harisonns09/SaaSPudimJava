@@ -59,6 +59,10 @@ public class OrderService {
             throw new ValidationException("Nome do cliente é obrigatório");
         }
 
+        if (!request.aceiteTermos) {
+            throw new ValidationException("É necessário aceitar os termos e a política de privacidade");
+        }
+
         if (request.itens == null || request.itens.isEmpty()) {
             throw new ValidationException("Pedido deve ter pelo menos um item");
         }
@@ -116,6 +120,8 @@ public class OrderService {
         order.tipoEntrega = request.tipoEntrega;
         order.endereco = request.endereco;
         order.observacoes = request.observacoes;
+        order.aceiteTermos = true;
+        order.aceiteTermosEm = LocalDateTime.now();
         order.criadoEm = LocalDateTime.now();
         order.atualizadoEm = LocalDateTime.now();
 

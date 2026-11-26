@@ -137,6 +137,7 @@ export interface CriarPedidoRequest {
   tipoEntrega: DeliveryType;
   endereco?: string;
   observacoes?: string;
+  aceiteTermos: boolean;
   itens: CriarPedidoItemRequest[];
 }
 

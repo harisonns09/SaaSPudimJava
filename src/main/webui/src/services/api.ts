@@ -140,10 +140,10 @@ export const api = {
     return session;
   },
 
-  async register(email: string, password: string, storeName: string): Promise<AuthSession> {
+  async register(email: string, password: string, storeName: string, aceiteTermos: boolean): Promise<AuthSession> {
     const data = await apiRequest<{ token: string }>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, storeName }),
+      body: JSON.stringify({ email, password, storeName, aceiteTermos }),
     });
 
     const session: AuthSession = {

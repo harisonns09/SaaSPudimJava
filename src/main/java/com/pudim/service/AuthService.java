@@ -26,6 +26,10 @@ public class AuthService {
             throw new ValidationException("Nome da loja, e-mail e senha são obrigatórios.");
         }
 
+        if (!request.isAceiteTermos()) {
+            throw new ValidationException("É necessário aceitar os termos e a política de privacidade.");
+        }
+
         storeConfigService.createStore(request.getStoreName(), request.getEmail(), request.getPassword());
 
         LoginRequest login = new LoginRequest();

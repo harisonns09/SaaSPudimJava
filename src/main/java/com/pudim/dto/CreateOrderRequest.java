@@ -24,5 +24,7 @@ public class CreateOrderRequest {
 
     public String observacoes;
 
+    public boolean aceiteTermos;
+
     public CreateOrderRequest() {}
 }

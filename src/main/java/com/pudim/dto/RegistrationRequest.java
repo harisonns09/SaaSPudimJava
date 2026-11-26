@@ -4,6 +4,15 @@ public class RegistrationRequest {
     private String email;
     private String password;
     private String storeName;
+    private boolean aceiteTermos;
+
+    public boolean isAceiteTermos() {
+        return aceiteTermos;
+    }
+
+    public void setAceiteTermos(boolean aceiteTermos) {
+        this.aceiteTermos = aceiteTermos;
+    }
 
     public String getEmail() {
         return email;

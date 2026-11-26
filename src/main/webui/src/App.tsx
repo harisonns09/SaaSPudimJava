@@ -10,6 +10,7 @@ import { LoginPage } from './pages/Login';
 import { RegisterPage } from './pages/Register'; // Importa a nova página
 import { PublicMenuPage } from './pages/public/PublicMenu';
 import { OrderTrackingPage } from './pages/public/MeusPedidos';
+import { TermosPage, PrivacidadePage } from './pages/Legal';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { isSuperAdminToken } from './services/api';
 
@@ -50,7 +51,11 @@ export function App() {
                         <Route path="configuracoes" element={<SettingsPage />} />
                     </Route>
 
+                    <Route path="/termos" element={<TermosPage />} />
+                    <Route path="/privacidade" element={<PrivacidadePage />} />
+
                     <Route path="/:slug/pedido" element={<OrderTrackingPage />} />
+
                     <Route path="/:slug" element={<PublicMenuPage />} />
 
                     <Route path="*" element={<Navigate to="/login" />} />

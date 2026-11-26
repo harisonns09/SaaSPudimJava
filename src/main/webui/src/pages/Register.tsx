@@ -8,6 +8,7 @@ export function RegisterPage() {
     const [storeName, setStoreName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [aceiteTermos, setAceiteTermos] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
@@ -19,7 +20,7 @@ export function RegisterPage() {
         setIsLoading(true);
 
         try {
-            const session = await api.register(email, password, storeName);
+            const session = await api.register(email, password, storeName, aceiteTermos);
             login(session);
             navigate('/admin');
         } catch (err) {
@@ -76,13 +77,27 @@ export function RegisterPage() {
                     />
                 </div>
 
+                <label className="flex items-start gap-2 text-sm text-[#5C4A3E]">
+                    <input
+                        type="checkbox"
+                        checked={aceiteTermos}
+                        onChange={(e) => setAceiteTermos(e.target.checked)}
+                        disabled={isLoading}
+                        className="mt-1"
+                    />
+                    <span>
+                        Li e aceito os <a href="/termos" className="font-semibold text-[#B45309] underline">termos de uso</a> e a{' '}
+                        <a href="/privacidade" className="font-semibold text-[#B45309] underline">política de privacidade</a>.
+                    </span>
+                </label>
+
                 {error && (
                     <p className="text-center text-sm text-red-600">{error}</p>
                 )}
 
                 <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || !aceiteTermos}
                     className="flex w-full justify-center rounded-lg bg-[#B45309] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#92400E] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B45309] disabled:opacity-50"
                 >
                     {isLoading ? 'Criando sua loja...' : 'Criar minha loja grátis'}

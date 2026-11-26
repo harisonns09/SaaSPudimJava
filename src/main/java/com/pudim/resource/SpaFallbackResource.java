@@ -64,6 +64,20 @@ public class SpaFallbackResource {
         return servirSpa();
     }
 
+    @GET
+    @Path("/termos")
+    @Produces(MediaType.TEXT_HTML)
+    public Response termos() {
+        return servirSpa();
+    }
+
+    @GET
+    @Path("/privacidade")
+    @Produces(MediaType.TEXT_HTML)
+    public Response privacidade() {
+        return servirSpa();
+    }
+
     private Response servirSpa() {
         InputStream index = Thread.currentThread().getContextClassLoader()
                 .getResourceAsStream("META-INF/resources/index.html");
