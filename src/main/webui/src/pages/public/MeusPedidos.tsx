@@ -35,8 +35,27 @@ function formatDateTime(value?: string | null) {
   return new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 }
 
-function PedidoCard({ pedido }: { pedido: Pedido }) {
+function PedidoCard({ pedido, slug }: { pedido: Pedido; slug: string }) {
   const etapaAtual = TIMELINE.indexOf(pedido.status);
+  const [pagando, setPagando] = useState(false);
+  const [erroPagamento, setErroPagamento] = useState<string | null>(null);
+
+  const pagarAgora = async () => {
+    setPagando(true);
+    setErroPagamento(null);
+    try {
+      const atualizado = await api.gerarPagamentoPublico(slug, pedido.codigo, pedido.clienteWhatsapp);
+      if (atualizado.pagamentoUrl) {
+        window.location.href = atualizado.pagamentoUrl;
+        return;
+      }
+      setErroPagamento('Não foi possível gerar o link de pagamento.');
+    } catch (err) {
+      setErroPagamento(err instanceof Error ? err.message : 'Não foi possível gerar o link de pagamento.');
+    } finally {
+      setPagando(false);
+    }
+  };
 
   return (
     <article className="rounded-2xl border border-[#EADBC8] bg-white p-5 sm:p-7">
@@ -99,13 +118,18 @@ function PedidoCard({ pedido }: { pedido: Pedido }) {
             Pagamento confirmado{pedido.pagoEm ? ` em ${formatDateTime(pedido.pagoEm)}` : ''}.
           </p>
         )}
-        {pedido.pagamentoStatus === 'AGUARDANDO' && pedido.pagamentoUrl && (
-          <a
-            href={pedido.pagamentoUrl}
-            className="mt-4 flex w-full items-center justify-center rounded-xl bg-[#16834A] px-4 py-3 text-sm font-semibold text-white"
-          >
-            Pagar agora
-          </a>
+        {pedido.pagamentoStatus === 'AGUARDANDO' && (
+          <>
+            <button
+              type="button"
+              onClick={pagarAgora}
+              disabled={pagando}
+              className="mt-4 flex w-full items-center justify-center rounded-xl bg-[#16834A] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {pagando ? 'Gerando link...' : 'Pagar agora'}
+            </button>
+            {erroPagamento && <p className="mt-2 text-sm text-red-600">{erroPagamento}</p>}
+          </>
         )}
       </div>
     </article>
@@ -212,7 +236,7 @@ export function OrderTrackingPage() {
           <p className="text-center text-sm text-[#7A6658]">Nenhum pedido encontrado para este número.</p>
         )}
 
-        {pedidos && pedidos.map((pedido) => <PedidoCard key={pedido.id} pedido={pedido} />)}
+        {pedidos && pedidos.map((pedido) => <PedidoCard key={pedido.id} pedido={pedido} slug={slug} />)}
 
         {existeAtivo && (
           <p className="text-center text-xs text-[#7A6658]">Atualizado automaticamente a cada 30 segundos.</p>

@@ -42,6 +42,14 @@ public class PublicStoreResource {
     }
 
     @POST
+    @Path("/{slug}/pedidos/{codigo}/pagamento")
+    public OrderResponse gerarPagamentoPedido(@PathParam("slug") String slug,
+                                              @PathParam("codigo") String codigo,
+                                              @QueryParam("whatsapp") String whatsapp) {
+        return publicStoreService.gerarPagamentoPedido(slug, codigo, whatsapp);
+    }
+
+    @POST
     @Path("/{slug}/pagamentos/infinitepay/webhook")
     public Response infinitePayWebhook(@PathParam("slug") String slug, Map<String, Object> payload) {
         publicStoreService.receberWebhookInfinitePay(slug, payload);

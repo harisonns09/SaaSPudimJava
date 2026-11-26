@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowRight, CakeSlice, LoaderCircle, Minus, Plus, ShoppingBag } from 'lucide-react';
 import { ResilientImage } from '../../components/ResilientImage';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { api } from '../../services/api';
 import { CriarPedidoRequest, DeliveryType, Pedido, Product, PublicMenuResponse } from '../../types';
 import { formatCurrency, formatWeight } from '../../utils/format';
@@ -32,6 +33,10 @@ export function PublicMenuPage() {
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [confirmedOrder, setConfirmedOrder] = useState<Pedido | null>(null);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [pendingOrder, setPendingOrder] = useState<Pedido | null>(null);
+    const [paymentError, setPaymentError] = useState<string | null>(null);
+    const [paymentLoading, setPaymentLoading] = useState(false);
 
     const loadMenu = useCallback(async () => {
         setLoading(true);
@@ -79,8 +84,7 @@ export function PublicMenuPage() {
         });
     };
 
-    const submitOrder = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
+    const submitOrder = async () => {
         if (selectedProducts.length === 0) return;
         if (checkout.tipoEntrega === DeliveryType.ENTREGA && !checkout.endereco.trim()) {
             setSubmitError('Informe o endereço para entrega.');
@@ -103,14 +107,15 @@ export function PublicMenuPage() {
         setSubmitError(null);
         try {
             const pedido = await api.criarPedidoPublico(slug, payload);
-            if (pedido.pagamentoStatus === 'AGUARDANDO' && pedido.pagamentoUrl) {
-                window.location.href = pedido.pagamentoUrl;
-                return;
-            }
-            setConfirmedOrder(pedido);
             setQuantities({});
             setCheckout(EMPTY_CHECKOUT);
             void loadMenu();
+            setConfirmOpen(false);
+            if (pedido.pagamentoStatus === 'AGUARDANDO') {
+                setPendingOrder(pedido);
+            } else {
+                setConfirmedOrder(pedido);
+            }
         } catch (submitErr) {
             setSubmitError(
                 submitErr instanceof Error
@@ -335,7 +340,13 @@ export function PublicMenuPage() {
                                 </div>
 
                                 {menu.loja.abertaParaEncomendas ? (
-                                    <form onSubmit={submitOrder} className="mt-6 grid gap-4 sm:grid-cols-2">
+                    <form
+                                        onSubmit={(event: FormEvent<HTMLFormElement>) => {
+                                            event.preventDefault();
+                                            setConfirmOpen(true);
+                                        }}
+                                        className="mt-6 grid gap-4 sm:grid-cols-2"
+                                    >
                                         <label className="flex flex-col gap-1.5 text-sm font-medium">
                                             Seu nome
                                             <input
@@ -428,6 +439,59 @@ export function PublicMenuPage() {
                     </>
                 ) : null}
             </main>
+            <ConfirmDialog
+                open={confirmOpen}
+                title="Confirmar pedido?"
+                message={`Pedido de ${itemCount} ${itemCount === 1 ? 'item' : 'itens'} no total de ${formatCurrency(total)}.`}
+                confirmLabel="Sim"
+                cancelLabel="Não"
+                loading={submitting}
+                onConfirm={submitOrder}
+                onCancel={() => setConfirmOpen(false)}
+            />
+            <ConfirmDialog
+                open={pendingOrder !== null}
+                title="Pedido registrado"
+                message={`Pedido ${pendingOrder?.codigo ?? ''} criado com pagamento pendente. Deseja prosseguir para o pagamento agora ou pagar depois?${paymentError ? ` ${paymentError}` : ''}`}
+                confirmLabel="Prosseguir para pagamento"
+                secondaryLabel="Pagar depois"
+                loading={paymentLoading}
+                onConfirm={async () => {
+                    if (!pendingOrder) return;
+                    setPaymentLoading(true);
+                    setPaymentError(null);
+                    try {
+                        const pedido = await api.gerarPagamentoPublico(
+                            slug,
+                            pendingOrder.codigo,
+                            pendingOrder.clienteWhatsapp
+                        );
+                        if (pedido.pagamentoUrl) {
+                            window.location.href = pedido.pagamentoUrl;
+                            return;
+                        }
+                        setPaymentError('Não foi possível gerar o link de pagamento.');
+                    } catch (paymentErr) {
+                        setPaymentError(
+                            paymentErr instanceof Error
+                                ? paymentErr.message
+                                : 'Não foi possível gerar o link de pagamento.'
+                        );
+                    } finally {
+                        setPaymentLoading(false);
+                    }
+                }}
+                onSecondary={() => {
+                    setConfirmedOrder(pendingOrder);
+                    setPendingOrder(null);
+                    setPaymentError(null);
+                }}
+                onCancel={() => {
+                    setConfirmedOrder(pendingOrder);
+                    setPendingOrder(null);
+                    setPaymentError(null);
+                }}
+            />
             <footer className="border-t border-[#EAE1D5] bg-white px-5 py-5 text-center text-xs text-[#7A6658]">
                 Cardápio online · {menu?.loja.nomeLoja || 'Confeitaria artesanal'}
             </footer>

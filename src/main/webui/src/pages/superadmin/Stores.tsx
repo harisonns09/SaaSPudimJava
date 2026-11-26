@@ -14,6 +14,7 @@ import {
     X,
 } from 'lucide-react';
 import { BrandMark } from '../../components/BrandMark';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { StoreConfig } from '../../types';
@@ -38,6 +39,8 @@ interface Feedback {
 }
 
 type ModalState = { type: 'create' } | { type: 'edit'; store: StoreConfig } | null;
+
+type PendingStoreAction = { type: 'create' } | { type: 'save' } | { type: 'toggle'; store: StoreConfig };
 
 const inputClass =
     'w-full rounded-lg border border-[#EAE1D5] bg-white px-3 py-2 text-sm text-[#291D16] placeholder:text-[#A0907F] focus:border-[#B45309] focus:outline-none focus:ring-2 focus:ring-[#B45309]/20';
@@ -132,6 +135,7 @@ export function SuperAdminStoresPage() {
     const [editForm, setEditForm] = useState<EditFormState | null>(null);
     const [createForm, setCreateForm] = useState<CreateFormState>(emptyCreateForm);
     const [saving, setSaving] = useState(false);
+    const [pendingAction, setPendingAction] = useState<PendingStoreAction | null>(null);
 
     const loadStores = () =>
         api
@@ -180,8 +184,7 @@ export function SuperAdminStoresPage() {
     const updateEdit = <K extends keyof EditFormState>(field: K, value: EditFormState[K]) =>
         setEditForm((current) => (current ? { ...current, [field]: value } : current));
 
-    const handleSave = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
+    const handleSave = async () => {
         if (modal?.type !== 'edit' || !editForm) return;
 
         const taxaTexto = editForm.taxaEntregaPadrao.trim().replace(',', '.');
@@ -210,8 +213,7 @@ export function SuperAdminStoresPage() {
         }
     };
 
-    const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
+    const handleCreate = async () => {
         setSaving(true);
         try {
             const created = await api.criarLoja({
@@ -231,11 +233,6 @@ export function SuperAdminStoresPage() {
 
     const toggleStatus = async (store: StoreConfig) => {
         const ativar = store.ativa === false;
-        const pergunta = ativar
-            ? `Reativar a loja "${store.nomeLoja}"?`
-            : `Desativar a loja "${store.nomeLoja}"? O cardápio ficará indisponível e novos pedidos serão bloqueados.`;
-        if (!window.confirm(pergunta)) return;
-
         try {
             const updated = await api.alterarStatusLoja(store.tenantId, ativar);
             setStores((current) => current.map((s) => (s.tenantId === updated.tenantId ? updated : s)));
@@ -355,7 +352,7 @@ export function SuperAdminStoresPage() {
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => toggleStatus(store)}
+                                        onClick={() => setPendingAction({ type: 'toggle', store })}
                                         className={`ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                                             ativa ? 'text-[#991B1B] hover:bg-[#FEF2F2]' : 'text-[#166534] hover:bg-[#ECFDF3]'
                                         }`}
@@ -382,7 +379,13 @@ export function SuperAdminStoresPage() {
 
             {modal?.type === 'create' && (
                 <Modal title="Cadastrar nova loja" subtitle="Cria a loja e o primeiro administrador dela." onClose={closeModal}>
-                    <form onSubmit={handleCreate} className="space-y-4">
+                    <form
+                        onSubmit={(event: FormEvent<HTMLFormElement>) => {
+                            event.preventDefault();
+                            setPendingAction({ type: 'create' });
+                        }}
+                        className="space-y-4"
+                    >
                         <label className="block space-y-1">
                             <span className="text-xs font-medium text-[#5C4A3E]">Nome da loja *</span>
                             <input
@@ -428,7 +431,13 @@ export function SuperAdminStoresPage() {
 
             {modal?.type === 'edit' && editForm && (
                 <Modal title={`Configurações de ${modal.store.nomeLoja}`} subtitle={`Endereço público: /${modal.store.slug}`} onClose={closeModal}>
-                    <form onSubmit={handleSave} className="space-y-4">
+                    <form
+                        onSubmit={(event: FormEvent<HTMLFormElement>) => {
+                            event.preventDefault();
+                            setPendingAction({ type: 'save' });
+                        }}
+                        className="space-y-4"
+                    >
                         <label className="block space-y-1">
                             <span className="text-xs font-medium text-[#5C4A3E]">Nome da loja *</span>
                             <input required value={editForm.nomeLoja} onChange={(e) => updateEdit('nomeLoja', e.target.value)} className={inputClass} />
@@ -477,6 +486,40 @@ export function SuperAdminStoresPage() {
                     </form>
                 </Modal>
             )}
+
+            <ConfirmDialog
+                open={pendingAction !== null}
+                title={
+                    pendingAction?.type === 'toggle'
+                        ? pendingAction.store.ativa === false
+                            ? 'Reativar loja'
+                            : 'Desativar loja'
+                        : pendingAction?.type === 'create'
+                          ? 'Criar loja'
+                          : 'Salvar alterações da loja'
+                }
+                message={
+                    pendingAction?.type === 'toggle'
+                        ? pendingAction.store.ativa === false
+                            ? `Reativar a loja "${pendingAction.store.nomeLoja}"?`
+                            : `Desativar a loja "${pendingAction.store.nomeLoja}"? O cardápio ficará indisponível e novos pedidos serão bloqueados.`
+                        : pendingAction?.type === 'create'
+                          ? 'Criar a loja e o administrador informados?'
+                          : 'Salvar as alterações desta loja?'
+                }
+                confirmLabel={pendingAction?.type === 'toggle' && pendingAction.store.ativa !== false ? 'Desativar' : 'Confirmar'}
+                tone={pendingAction?.type === 'toggle' && pendingAction.store.ativa !== false ? 'danger' : 'default'}
+                loading={saving}
+                onCancel={() => setPendingAction(null)}
+                onConfirm={async () => {
+                    const action = pendingAction;
+                    if (!action) return;
+                    if (action.type === 'toggle') await toggleStatus(action.store);
+                    else if (action.type === 'create') await handleCreate();
+                    else await handleSave();
+                    setPendingAction(null);
+                }}
+            />
         </div>
     );
 }

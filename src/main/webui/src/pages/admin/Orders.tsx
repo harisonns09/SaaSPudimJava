@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, LoaderCircle, RefreshCw, Search, XCircle } from 'lucide-react';
 import { api } from '../../services/api';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { DeliveryType, Pedido, PedidoStatus } from '../../types';
 import { formatCurrency } from '../../utils/format';
 
@@ -17,6 +18,16 @@ const REFRESH_INTERVAL_MS = 15_000;
 interface Feedback {
     type: 'success' | 'error';
     message: string;
+}
+
+interface PendingOrderAction {
+    pedido: Pedido;
+    novoStatus: PedidoStatus;
+    title: string;
+    message: string;
+    confirmLabel: string;
+    successText: string;
+    tone: 'default' | 'danger';
 }
 
 function errorMessage(error: unknown, fallback: string): string {
@@ -55,6 +66,7 @@ export function OrdersPage() {
     const [feedback, setFeedback] = useState<Feedback | null>(null);
     const [updatingId, setUpdatingId] = useState<number | null>(null);
     const [busca, setBusca] = useState('');
+    const [pendingAction, setPendingAction] = useState<PendingOrderAction | null>(null);
     // null = ainda não carregou; o primeiro carregamento só registra os pagos existentes, sem alertar.
     const knownPaidIds = useRef<Set<number> | null>(null);
 
@@ -128,8 +140,34 @@ export function OrdersPage() {
     };
 
     const handleCancel = (pedido: Pedido) => {
-        if (!window.confirm(`Cancelar o pedido ${pedido.codigo}? O estoque será devolvido.`)) return;
-        void changeStatus(pedido, 'CANCELADO', 'Pedido cancelado');
+        setPendingAction({
+            pedido,
+            novoStatus: 'CANCELADO',
+            title: 'Cancelar pedido',
+            message: `Cancelar o pedido ${pedido.codigo}? O estoque será devolvido.`,
+            confirmLabel: 'Sim, cancelar',
+            successText: 'Pedido cancelado',
+            tone: 'danger',
+        });
+    };
+
+    const requestAdvance = (pedido: Pedido, novoStatus: PedidoStatus, nextLabel: string) => {
+        setPendingAction({
+            pedido,
+            novoStatus,
+            title: nextLabel,
+            message: `Confirmar a ação "${nextLabel}" no pedido ${pedido.codigo} (${pedido.clienteNome})?`,
+            confirmLabel: nextLabel,
+            successText: `Pedido avançado para ${nextLabel}`,
+            tone: 'default',
+        });
+    };
+
+    const confirmPendingAction = () => {
+        if (!pendingAction) return;
+        const { pedido, novoStatus, successText } = pendingAction;
+        setPendingAction(null);
+        void changeStatus(pedido, novoStatus, successText);
     };
 
     const cancelados = pedidos.filter((p) => p.status === 'CANCELADO').length;
@@ -261,9 +299,7 @@ export function OrdersPage() {
                                                         <button
                                                             type="button"
                                                             disabled={busy}
-                                                            onClick={() =>
-                                                                void changeStatus(pedido, column.next!, `Pedido avançado para ${column.nextLabel}`)
-                                                            }
+                                                            onClick={() => requestAdvance(pedido, column.next!, column.nextLabel!)}
                                                             className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#B45309] px-3 py-2 text-xs font-semibold text-white hover:bg-[#9A3412] disabled:opacity-50"
                                                         >
                                                             {busy ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
@@ -290,6 +326,16 @@ export function OrdersPage() {
                     })}
                 </div>
             )}
+
+            <ConfirmDialog
+                open={pendingAction !== null}
+                title={pendingAction?.title ?? ''}
+                message={pendingAction?.message ?? ''}
+                confirmLabel={pendingAction?.confirmLabel}
+                tone={pendingAction?.tone}
+                onConfirm={confirmPendingAction}
+                onCancel={() => setPendingAction(null)}
+            />
         </div>
     );
 }

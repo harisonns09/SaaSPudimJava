@@ -4,6 +4,7 @@ import { api } from '../../services/api';
 import { Product } from '../../types';
 import { formatCurrency, formatWeight } from '../../utils/format';
 import { ResilientImage } from '../../components/ResilientImage';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 interface ProductForm {
     nome: string;
@@ -34,6 +35,8 @@ export function ProductsPage() {
     const [success, setSuccess] = useState<string | null>(null);
     const [editing, setEditing] = useState<Product | null>(null);
     const [togglingId, setTogglingId] = useState<string | null>(null);
+    const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
+    const [pendingToggle, setPendingToggle] = useState<Product | null>(null);
 
     const startEdit = (product: Product) => {
         setEditing(product);
@@ -88,8 +91,7 @@ export function ProductsPage() {
         void loadProducts();
     }, [loadProducts]);
 
-    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
+    const handleSubmit = async () => {
         setError(null);
         setSuccess(null);
 
@@ -160,7 +162,14 @@ export function ProductsPage() {
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <form
+                    onSubmit={(event: FormEvent<HTMLFormElement>) => {
+                        event.preventDefault();
+                        setConfirmSaveOpen(true);
+                    }}
+                    className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                >
+
                     <label className="space-y-1.5 sm:col-span-2">
                         <span className="text-sm font-medium text-[#5C4A3E]">Nome do produto *</span>
                         <input
@@ -327,7 +336,7 @@ export function ProductsPage() {
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => void toggleActive(product)}
+                                        onClick={() => setPendingToggle(product)}
                                         disabled={togglingId === product.id}
                                         aria-label={`${product.ativo ? 'Desativar' : 'Ativar'} ${product.nome}`}
                                         className="rounded-lg p-2 text-[#5C4A3E] hover:bg-[#FAF7F2] disabled:opacity-50"
@@ -344,6 +353,41 @@ export function ProductsPage() {
                     </ul>
                 )}
             </section>
+
+            <ConfirmDialog
+                open={confirmSaveOpen}
+                title={editing ? 'Salvar alterações do produto' : 'Cadastrar produto'}
+                message={
+                    editing
+                        ? `Salvar as alterações em "${editing.nome}"?`
+                        : `Cadastrar o produto "${form.nome.trim() || 'sem nome'}" no estoque e no cardápio?`
+                }
+                confirmLabel={editing ? 'Salvar' : 'Cadastrar'}
+                loading={saving}
+                onConfirm={async () => {
+                    await handleSubmit();
+                    setConfirmSaveOpen(false);
+                }}
+                onCancel={() => setConfirmSaveOpen(false)}
+            />
+
+            <ConfirmDialog
+                open={pendingToggle !== null}
+                title={pendingToggle?.ativo ? 'Desativar produto' : 'Ativar produto'}
+                message={
+                    pendingToggle?.ativo
+                        ? `Desativar "${pendingToggle.nome}"? Ele deixará de aparecer no cardápio público.`
+                        : `Ativar "${pendingToggle?.nome ?? ''}" no cardápio público?`
+                }
+                confirmLabel={pendingToggle?.ativo ? 'Desativar' : 'Ativar'}
+                tone={pendingToggle?.ativo ? 'danger' : 'default'}
+                onConfirm={() => {
+                    const target = pendingToggle;
+                    setPendingToggle(null);
+                    if (target) void toggleActive(target);
+                }}
+                onCancel={() => setPendingToggle(null)}
+            />
         </div>
     );
 }

@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { LoaderCircle, Save } from 'lucide-react';
 import { api } from '../../services/api';
 import { StoreConfig } from '../../types';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 interface FormState {
     nomeLoja: string;
@@ -35,6 +36,7 @@ export function SettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [feedback, setFeedback] = useState<Feedback | null>(null);
+    const [confirmOpen, setConfirmOpen] = useState(false);
 
     useEffect(() => {
         api
@@ -61,8 +63,7 @@ export function SettingsPage() {
     const update = <K extends keyof FormState>(field: K, value: FormState[K]) =>
         setForm((current) => (current ? { ...current, [field]: value } : current));
 
-    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
+    const handleSubmit = async () => {
         if (!form) return;
 
         const taxaTexto = form.taxaEntregaPadrao.trim().replace(',', '.');
@@ -112,7 +113,14 @@ export function SettingsPage() {
     }
 
     return (
-        <form onSubmit={handleSubmit} className="max-w-2xl space-y-5">
+        <form
+            onSubmit={(event: FormEvent<HTMLFormElement>) => {
+                event.preventDefault();
+                setConfirmOpen(true);
+            }}
+            className="max-w-2xl space-y-5"
+        >
+
             {feedback && (
                 <div
                     role="status"
@@ -206,6 +214,19 @@ export function SettingsPage() {
                     Salvar alterações
                 </button>
             </div>
+
+            <ConfirmDialog
+                open={confirmOpen}
+                title="Salvar configurações"
+                message="Salvar as alterações nas configurações da loja? Elas passam a valer imediatamente no cardápio e nos pedidos."
+                confirmLabel="Salvar"
+                loading={saving}
+                onConfirm={async () => {
+                    await handleSubmit();
+                    setConfirmOpen(false);
+                }}
+                onCancel={() => setConfirmOpen(false)}
+            />
         </form>
     );
 }

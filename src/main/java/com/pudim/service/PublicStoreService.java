@@ -61,6 +61,17 @@ public class PublicStoreService {
         return orderService.createOrder(tenantId, request);
     }
 
+    public OrderResponse gerarPagamentoPedido(String slug, String codigo, String whatsapp) {
+        String tenantId = storeConfigRepository.findTenantIdBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Loja não encontrada."));
+
+        tenantContext.setTenantId(tenantId);
+        verificarAtiva(storeConfigRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Loja não encontrada.")));
+
+        return orderService.gerarPagamentoPublico(tenantId, codigo, whatsapp);
+    }
+
     public List<OrderResponse> getOrdersTracking(String slug, String whatsapp) {
         String tenantId = storeConfigRepository.findTenantIdBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Loja não encontrada."));

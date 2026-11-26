@@ -130,12 +130,49 @@ public class OrderService {
         ));
 
         StoreConfig store = storeConfigRepository.findByTenantId(tenantId).orElse(null);
-        if (store != null && store.infinitepayHandle != null && !store.infinitepayHandle.isBlank()) {
+        if (temHandleInfinitePay(store)) {
+            // O link de pagamento é gerado sob demanda (gerarPagamentoPublico), não aqui.
             order.pagamentoStatus = PAGAMENTO_AGUARDANDO;
-            order.pagamentoUrl = criarCobrancaInfinitePay(store, order, ordenados);
         }
 
         return new OrderResponse(order, ordenados);
+    }
+
+    @Transactional
+    public OrderResponse gerarPagamentoPublico(String tenantId, String codigo, String whatsapp) {
+        tenantContext.setTenantId(tenantId);
+
+        Order order = orderRepository.findByCodigo(codigo)
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido não encontrado"));
+        validarTenantId(order.tenantId, tenantId);
+
+        // O código do pedido sozinho não basta: exige o WhatsApp cadastrado no pedido.
+        String whatsappInformado = somenteDigitos(whatsapp);
+        if (whatsappInformado.isEmpty() || !whatsappInformado.equals(somenteDigitos(order.clienteWhatsapp))) {
+            throw new ResourceNotFoundException("Pedido não encontrado");
+        }
+
+        if (PAGAMENTO_PAGO.equals(order.pagamentoStatus)) {
+            throw new ValidationException("Este pedido já foi pago");
+        }
+        if (!PAGAMENTO_AGUARDANDO.equals(order.pagamentoStatus)) {
+            throw new ValidationException("Este pedido não possui pagamento online pendente");
+        }
+
+        if (order.pagamentoUrl == null) {
+            StoreConfig store = storeConfigRepository.findByTenantId(tenantId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Loja não encontrada"));
+            List<OrderItem> itens = order.itens != null ? new ArrayList<>(order.itens) : new ArrayList<>();
+            order.pagamentoUrl = criarCobrancaInfinitePay(store, order, itens);
+            order.atualizadoEm = LocalDateTime.now();
+            orderRepository.persist(order);
+        }
+
+        return toOrderResponse(order);
+    }
+
+    private boolean temHandleInfinitePay(StoreConfig store) {
+        return store != null && store.infinitepayHandle != null && !store.infinitepayHandle.isBlank();
     }
 
     private String criarCobrancaInfinitePay(StoreConfig store, Order order, List<OrderItem> itens) {

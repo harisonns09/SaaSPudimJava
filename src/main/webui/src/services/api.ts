@@ -320,4 +320,14 @@ export const api = {
       body: JSON.stringify(payload),
     });
   },
+
+  gerarPagamentoPublico(slug: string, codigo: string, whatsapp: string): Promise<Pedido> {
+    return apiRequest<Pedido>(
+      `/loja/${encodeURIComponent(slug)}/pedidos/${encodeURIComponent(codigo)}/pagamento?whatsapp=${encodeURIComponent(whatsapp)}`,
+      {
+        method: 'POST',
+        tenantSlug: slug,
+      }
+    );
+  },
 };
