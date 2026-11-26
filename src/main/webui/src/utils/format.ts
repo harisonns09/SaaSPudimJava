@@ -5,16 +5,6 @@ export function formatCurrency(value: number): string {
   }).format(value);
 }
 
-export function formatWeight(grams: number): string {
-  if (grams >= 1000 && grams % 1000 === 0) {
-    return `${grams / 1000}kg`;
-  }
-  if (grams >= 1000) {
-    return `${(grams / 1000).toFixed(1).replace('.', ',')}kg`;
-  }
-  return `${grams}g`;
-}
-
 export function formatInteger(value: number): string {
   return new Intl.NumberFormat('pt-BR').format(Math.round(value));
 }

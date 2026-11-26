@@ -2,14 +2,13 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { ImagePlus, LoaderCircle, PackagePlus, Pencil, Power, X } from 'lucide-react';
 import { api } from '../../services/api';
 import { Product } from '../../types';
-import { formatCurrency, formatWeight } from '../../utils/format';
+import { formatCurrency } from '../../utils/format';
 import { ResilientImage } from '../../components/ResilientImage';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 interface ProductForm {
     nome: string;
     descricao: string;
-    pesoGramas: string;
     precoVenda: string;
     custoEstimado: string;
     estoqueAtual: string;
@@ -19,7 +18,6 @@ interface ProductForm {
 const INITIAL_FORM: ProductForm = {
     nome: '',
     descricao: '',
-    pesoGramas: '1000',
     precoVenda: '',
     custoEstimado: '',
     estoqueAtual: '0',
@@ -43,7 +41,6 @@ export function ProductsPage() {
         setForm({
             nome: product.nome,
             descricao: product.descricao ?? '',
-            pesoGramas: String(product.pesoGramas),
             precoVenda: String(product.precoVenda),
             custoEstimado: String(product.custoEstimado ?? ''),
             estoqueAtual: String(product.estoqueAtual),
@@ -97,15 +94,14 @@ export function ProductsPage() {
 
         const price = Number(form.precoVenda.replace(',', '.'));
         const cost = Number(form.custoEstimado.replace(',', '.')) || 0;
-        const weight = Number(form.pesoGramas);
         const stock = Number(form.estoqueAtual);
 
         if (!form.nome.trim() || !Number.isFinite(price) || price <= 0) {
             setError('Informe o nome do produto e um preço de venda maior que zero.');
             return;
         }
-        if (!Number.isInteger(weight) || weight <= 0 || !Number.isInteger(stock) || stock < 0) {
-            setError('Informe um peso válido e um estoque igual ou maior que zero.');
+        if (!Number.isInteger(stock) || stock < 0) {
+            setError('Informe um estoque igual ou maior que zero.');
             return;
         }
         if (!Number.isFinite(cost) || cost < 0) {
@@ -121,7 +117,6 @@ export function ProductsPage() {
                     : { ativo: true }),
                 nome: form.nome.trim(),
                 descricao: form.descricao.trim(),
-                pesoGramas: weight,
                 precoVenda: price,
                 custoEstimado: cost,
                 estoqueAtual: stock,
@@ -222,19 +217,6 @@ export function ProductsPage() {
                     </label>
 
                     <label className="space-y-1.5">
-                        <span className="text-sm font-medium text-[#5C4A3E]">Peso (gramas) *</span>
-                        <input
-                            required
-                            type="number"
-                            min="1"
-                            step="1"
-                            value={form.pesoGramas}
-                            onChange={(event) => setForm({ ...form, pesoGramas: event.target.value })}
-                            className="w-full rounded-lg border border-[#EAE1D5] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#B45309] focus:ring-2 focus:ring-[#B45309]/15"
-                        />
-                    </label>
-
-                    <label className="space-y-1.5">
                         <span className="text-sm font-medium text-[#5C4A3E]">Estoque inicial *</span>
                         <input
                             required
@@ -322,7 +304,7 @@ export function ProductsPage() {
                                             {product.ativo ? 'Ativo' : 'Inativo'}
                                         </span>
                                     </p>
-                                    <p className="text-xs text-[#7A6658]">{formatWeight(product.pesoGramas)} · Estoque: {product.estoqueAtual}</p>
+                                    <p className="text-xs text-[#7A6658]">Estoque: {product.estoqueAtual}</p>
                                 </div>
                                 <p className="shrink-0 text-sm font-semibold text-[#291D16]">{formatCurrency(product.precoVenda)}</p>
                                 <div className="flex shrink-0 gap-1">

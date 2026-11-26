@@ -28,8 +28,6 @@ public class Product extends PanacheEntityBase {
 
     public BigDecimal custoEstimado;
 
-    public int pesoGramas;
-
     public int estoqueAtual;
 
     @Column(length = 1000)

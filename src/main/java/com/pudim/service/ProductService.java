@@ -44,7 +44,6 @@ public class ProductService {
         product.descricao = changes.descricao;
         product.precoVenda = changes.precoVenda;
         product.custoEstimado = changes.custoEstimado;
-        product.pesoGramas = changes.pesoGramas;
         product.estoqueAtual = changes.estoqueAtual;
         product.imagemUrl = changes.imagemUrl;
         product.destaque = changes.destaque;
@@ -95,10 +94,9 @@ public class ProductService {
         if (product == null
                 || product.nome == null || product.nome.isBlank()
                 || product.precoVenda == null || product.precoVenda.compareTo(BigDecimal.ZERO) <= 0
-                || product.pesoGramas <= 0
                 || product.estoqueAtual < 0
                 || (product.custoEstimado != null && product.custoEstimado.compareTo(BigDecimal.ZERO) < 0)) {
-            throw new ValidationException("Informe nome, preço e peso válidos, além de estoque e custo não negativos.");
+            throw new ValidationException("Informe nome e preço válidos, além de estoque e custo não negativos.");
         }
     }
 }

@@ -1,6 +1,7 @@
 import {
   AtualizarStatusPedidoRequest,
   AuthSession,
+  CompradorProduto,
   CreateStoreRequest,
   DashboardData,
   CriarPedidoRequest,
@@ -304,6 +305,15 @@ export const api = {
 
   buscarDashboard(): Promise<DashboardData> {
     return apiRequest<DashboardData>('/admin/dashboard', { requiresAuth: true });
+  },
+
+  relatorioCompradores(produtoId?: number): Promise<CompradorProduto[]> {
+    const params = new URLSearchParams();
+    if (produtoId !== undefined) params.set('produtoId', String(produtoId));
+    const query = params.toString();
+    return apiRequest<CompradorProduto[]>(`/admin/relatorios/compradores${query ? `?${query}` : ''}`, {
+      requiresAuth: true,
+    });
   },
 
   listarPedidosPublicos(slug: string, whatsapp: string): Promise<Pedido[]> {

@@ -8,4 +8,5 @@ public class StoreConfigUpdateRequest {
     public BigDecimal taxaEntregaPadrao;
     public boolean abertaParaEncomendas;
     public String infinitepayHandle;
+    public String tipoNegocio;
 }

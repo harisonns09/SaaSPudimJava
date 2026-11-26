@@ -34,6 +34,10 @@ public class StoreConfig extends PanacheEntity {
     // InfinitePay Checkout: InfiniteTag da loja (sem o "$"). Se nulo, pedidos são criados sem cobrança online.
     public String infinitepayHandle;
 
+    // Tipo de produto vendido pela loja (ex.: Pudim, Roupas, Eletrônicos). Usado nos textos do cardápio e do admin.
+    @Column(name = "tipo_negocio", length = 60)
+    public String tipoNegocio = "Geral";
+
     // Outros campos do frontend que podem ser adicionados:
     // public String tempoPreparoMedio;
     // public String enderecoRetirada;

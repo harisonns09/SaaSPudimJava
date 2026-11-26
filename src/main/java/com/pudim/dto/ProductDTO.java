@@ -10,7 +10,6 @@ public class ProductDTO {
     public String descricao;
     public BigDecimal precoVenda;
     public BigDecimal custoEstimado;
-    public int pesoGramas;
     public int estoqueAtual;
     public String imagemUrl;
     public String destaque;
@@ -24,7 +23,6 @@ public class ProductDTO {
         this.descricao = product.descricao;
         this.precoVenda = product.precoVenda;
         this.custoEstimado = product.custoEstimado;
-        this.pesoGramas = product.pesoGramas;
         this.estoqueAtual = product.estoqueAtual;
         this.imagemUrl = product.imagemUrl;
         this.destaque = product.destaque;

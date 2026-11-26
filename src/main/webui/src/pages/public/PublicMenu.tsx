@@ -5,7 +5,7 @@ import { ResilientImage } from '../../components/ResilientImage';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { api } from '../../services/api';
 import { CriarPedidoRequest, DeliveryType, Pedido, Product, PublicMenuResponse } from '../../types';
-import { formatCurrency, formatWeight } from '../../utils/format';
+import { formatCurrency } from '../../utils/format';
 
 interface CheckoutForm {
     clienteNome: string;
@@ -211,7 +211,7 @@ export function PublicMenuPage() {
                             <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
                                 <div>
                                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B45309]">Nosso cardápio</p>
-                                    <h2 className="mt-1 font-display text-2xl font-semibold sm:text-3xl">Escolha seu pudim favorito</h2>
+                                    <h2 className="mt-1 font-display text-2xl font-semibold sm:text-3xl">Escolha seu produto favorito</h2>
                                 </div>
                                 {menu.loja.tempoPreparoMedio && (
                                     <p className="text-sm text-[#7A6658]">
@@ -251,7 +251,6 @@ export function PublicMenuPage() {
                                                     <div className="flex items-start justify-between gap-3">
                                                         <div>
                                                             <h3 className="font-display text-lg font-semibold">{product.nome}</h3>
-                                                            <p className="mt-1 text-xs text-[#7A6658]">{formatWeight(product.pesoGramas)}</p>
                                                         </div>
                                                         <p className="shrink-0 text-base font-semibold text-[#9A3412]">
                                                             {formatCurrency(product.precoVenda)}

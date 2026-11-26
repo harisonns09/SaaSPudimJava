@@ -10,6 +10,7 @@ interface FormState {
     taxaEntregaPadrao: string;
     abertaParaEncomendas: boolean;
     infinitepayHandle: string;
+    tipoNegocio: string;
 }
 
 interface Feedback {
@@ -27,6 +28,7 @@ function toForm(config: StoreConfig): FormState {
         taxaEntregaPadrao: config.taxaEntregaPadrao != null ? String(config.taxaEntregaPadrao) : '',
         abertaParaEncomendas: config.abertaParaEncomendas,
         infinitepayHandle: config.infinitepayHandle ?? '',
+        tipoNegocio: config.tipoNegocio ?? '',
     };
 }
 
@@ -82,6 +84,7 @@ export function SettingsPage() {
                 taxaEntregaPadrao: taxa,
                 abertaParaEncomendas: form.abertaParaEncomendas,
                 infinitepayHandle: form.infinitepayHandle.trim() || null,
+                tipoNegocio: form.tipoNegocio.trim() || null,
             });
             setConfig(saved);
             setForm(toForm(saved));
@@ -162,6 +165,20 @@ export function SettingsPage() {
                         Definido no cadastro e não pode ser alterado, pois links já enviados aos clientes dependem dele.
                     </p>
                 </div>
+            </section>
+
+            <section className="space-y-4 rounded-xl border border-[#EAE1D5] bg-white p-5">
+                <h2 className="font-display text-base font-semibold text-[#291D16]">Tipo de produto</h2>
+
+                <label className="block space-y-1">
+                    <span className="text-xs font-medium text-[#5C4A3E]">O que você vende</span>
+                    <input
+                        value={form.tipoNegocio}
+                        onChange={(event) => update('tipoNegocio', event.target.value)}
+                        placeholder="Ex.: Pudins, Bebidas, Roupas"
+                        className={inputClass}
+                    />
+                </label>
             </section>
 
             <section className="space-y-4 rounded-xl border border-[#EAE1D5] bg-white p-5">

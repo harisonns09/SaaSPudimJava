@@ -14,7 +14,6 @@ export interface Product {
   id: string;
   nome: string;
   descricao: string;
-  pesoGramas: number;
   precoVenda: number;
   custoEstimado: number;
   estoqueAtual: number;
@@ -38,6 +37,7 @@ export interface StoreConfigUpdate {
   taxaEntregaPadrao?: number | null;
   abertaParaEncomendas: boolean;
   infinitepayHandle?: string | null;
+  tipoNegocio?: string | null;
 }
 
 export interface CreateStoreRequest {
@@ -66,6 +66,7 @@ export interface StoreConfig {
   whatsappConectado: boolean;
   abertaParaEncomendas: boolean;
   infinitepayHandle?: string | null;
+  tipoNegocio?: string | null;
   tempoPreparoMedio: string;
   enderecoRetirada: string;
   tomDeVozIa: string;
@@ -85,6 +86,7 @@ export interface PublicMenuResponse {
     | 'enderecoRetirada'
     | 'bannerUrl'
     | 'whatsappId'
+    | 'tipoNegocio'
   >;
   produtos: Product[];
 }
@@ -147,6 +149,20 @@ export interface AtualizarStatusPedidoRequest {
 }
 
 // Espelha DashboardResponse do Quarkus (GET /api/admin/dashboard).
+export interface CompradorProduto {
+  pedidoId: number;
+  codigoPedido: string;
+  criadoEm: string;
+  status: PedidoStatus;
+  clienteNome: string;
+  clienteWhatsapp: string;
+  clienteEmail: string | null;
+  produtoId: number;
+  produtoNome: string;
+  quantidade: number;
+  precoUnitario: number;
+}
+
 export interface DashboardTopProduto {
   produtoId: number;
   produtoNome: string;

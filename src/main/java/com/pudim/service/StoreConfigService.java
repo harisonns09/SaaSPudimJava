@@ -98,6 +98,7 @@ public class StoreConfigService {
         config.taxaEntregaPadrao = changes.taxaEntregaPadrao;
         config.abertaParaEncomendas = changes.abertaParaEncomendas;
         config.infinitepayHandle = normalizeHandle(changes.infinitepayHandle);
+        config.tipoNegocio = blankToNull(changes.tipoNegocio) != null ? changes.tipoNegocio.trim() : "Geral";
         return config;
     }
 
@@ -132,6 +133,19 @@ public class StoreConfigService {
             limpo = limpo.substring(1).trim();
         }
         return limpo == null || limpo.isEmpty() ? null : limpo;
+    }
+
+    // Normaliza uma lista separada por vírgula: remove espaços, itens vazios e duplicados.
+    private static String normalizeList(String value) {
+        if (blankToNull(value) == null) {
+            return null;
+        }
+        String resultado = java.util.Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(item -> !item.isEmpty())
+                .distinct()
+                .collect(java.util.stream.Collectors.joining(", "));
+        return resultado.isEmpty() ? null : resultado;
     }
 
     private void setTenant(String tenantId) {

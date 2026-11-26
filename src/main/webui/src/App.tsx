@@ -4,6 +4,7 @@ import { DashboardPage } from './pages/admin/Dashboard';
 import { ProductsPage } from './pages/admin/Products';
 import { OrdersPage } from './pages/admin/Orders';
 import { SettingsPage } from './pages/admin/Settings';
+import { ReportsPage } from './pages/admin/Reports';
 import { SuperAdminStoresPage } from './pages/superadmin/Stores';
 import { SuperAdminLoginPage } from './pages/superadmin/Login';
 import { LoginPage } from './pages/Login';
@@ -49,6 +50,7 @@ export function App() {
                         <Route path="pedidos" element={<OrdersPage />} />
                         <Route path="produtos" element={<ProductsPage />} />
                         <Route path="configuracoes" element={<SettingsPage />} />
+                        <Route path="relatorios" element={<ReportsPage />} />
                     </Route>
 
                     <Route path="/termos" element={<TermosPage />} />

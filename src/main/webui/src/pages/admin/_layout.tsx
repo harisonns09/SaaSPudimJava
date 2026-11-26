@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
+    FileSpreadsheet,
     LayoutDashboard,
     LogOut,
     Menu,
@@ -17,6 +18,7 @@ const navigation = [
     { label: 'Dashboard', path: '/admin', icon: LayoutDashboard },
     { label: 'Pedidos', path: '/admin/pedidos', icon: ShoppingBag },
     { label: 'Produtos & Estoque', path: '/admin/produtos', icon: Package },
+    { label: 'Relatórios', path: '/admin/relatorios', icon: FileSpreadsheet },
     { label: 'Agente de IA & Loja', path: '/admin/configuracoes', icon: Sparkles },
 ];
 
@@ -24,6 +26,7 @@ const pageTitles: Record<string, string> = {
     '/admin': 'Visão geral',
     '/admin/pedidos': 'Pedidos',
     '/admin/produtos': 'Produtos & Estoque',
+    '/admin/relatorios': 'Relatórios',
     '/admin/configuracoes': 'Agente de IA & Configurações da Loja',
 };
 
