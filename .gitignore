@@ -44,6 +44,9 @@ nb-configuration.xml
 # TLS Certificates
 .certs/
 
+# Local app config with credentials (use environment variables in production)
+src/main/resources/application.properties
+
 # JWT keys (use Secret Manager in production)
 src/main/resources/*.pem
 
