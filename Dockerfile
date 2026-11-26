@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # ==========================================
 # Estágio 1: Build (Java 21 + Maven + Node.js para o Quinoa)
 # ==========================================
@@ -14,16 +13,15 @@ RUN ln -sf ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
 
 WORKDIR /workspace
 
-# Copia o pom.xml e baixa dependências primeiro; cache persistente do Maven entre builds
+# Copia o pom.xml e baixa dependências primeiro (camada em cache enquanto o pom não mudar)
 COPY pom.xml .
-RUN --mount=type=cache,target=/root/.m2 mvn dependency:go-offline -B
+RUN mvn dependency:go-offline -B
 
 # Copia o restante do projeto (Java + src/main/webui)
 COPY src ./src
 
-# Compila o backend + frontend (Quinoa) em modo fast-jar; reutiliza cache do Maven e do npm
-RUN --mount=type=cache,target=/root/.m2 --mount=type=cache,target=/root/.npm \
-    mvn package -DskipTests -B
+# Compila o backend + frontend (Quinoa) em modo fast-jar
+RUN mvn package -DskipTests -B
 
 # ==========================================
 # Estágio 2: Runtime (Imagem final leve para o Cloud Run)
