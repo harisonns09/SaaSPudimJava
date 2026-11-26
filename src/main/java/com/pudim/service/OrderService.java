@@ -140,7 +140,8 @@ public class OrderService {
         String webhookUrl = appPublicUrl + "/api/loja/" + store.slug + "/pagamentos/infinitepay/webhook";
 
         try {
-            return infinitePayClient.criarLink(store.infinitepayHandle, order.codigo, cobrancas, redirectUrl, webhookUrl);
+            return infinitePayClient.criarLink(store.infinitepayHandle, order.codigo, cobrancas, redirectUrl, webhookUrl,
+                    order.clienteNome, order.clienteWhatsapp);
         } catch (IllegalStateException e) {
             throw new ValidationException("Não foi possível gerar o link de pagamento. Tente novamente.");
         }

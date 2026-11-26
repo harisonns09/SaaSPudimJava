@@ -38,11 +38,22 @@ public class InfinitePayClient {
      * Retorna a URL de pagamento devolvida pela InfinitePay.
      */
     public String criarLink(String handle, String orderNsu, List<ItemCobranca> itens,
-                            String redirectUrl, String webhookUrl) {
+                            String redirectUrl, String webhookUrl, String clienteNome, String clienteWhatsapp) {
         ObjectNode body = objectMapper.createObjectNode();
         body.put("handle", handle);
         body.put("order_nsu", orderNsu);
         body.put("redirect_url", redirectUrl);
+
+        String telefone = telefoneE164(clienteWhatsapp);
+        if (clienteNome != null && !clienteNome.isBlank() || telefone != null) {
+            ObjectNode customer = body.putObject("customer");
+            if (clienteNome != null && !clienteNome.isBlank()) {
+                customer.put("name", clienteNome.trim());
+            }
+            if (telefone != null) {
+                customer.put("phone_number", telefone);
+            }
+        }
 
         ArrayNode itensNode = body.putArray("items");
         for (ItemCobranca item : itens) {
@@ -63,6 +74,20 @@ public class InfinitePayClient {
             throw new IllegalStateException("Resposta da InfinitePay sem URL de pagamento: " + resposta);
         }
         return url.asText();
+    }
+
+    /**
+     * Converte o WhatsApp salvo (ex.: 21991448289) para o formato E.164 (+5521991448289).
+     * Retorna null se não houver telefone válido.
+     */
+    static String telefoneE164(String whatsapp) {
+        if (whatsapp == null) return null;
+        String digitos = whatsapp.replaceAll("\\D", "");
+        if (digitos.isEmpty()) return null;
+        if (digitos.length() == 10 || digitos.length() == 11) {
+            digitos = "55" + digitos;
+        }
+        return "+" + digitos;
     }
 
     /**
