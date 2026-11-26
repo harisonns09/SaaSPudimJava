@@ -54,16 +54,31 @@ public class OrderService {
     public OrderResponse createOrder(String tenantId, CreateOrderRequest request) {
         tenantContext.setTenantId(tenantId);
 
+        // Validações iniciais
+        if (request.clienteNome == null || request.clienteNome.isBlank()) {
+            throw new ValidationException("Nome do cliente é obrigatório");
+        }
+
         if (request.itens == null || request.itens.isEmpty()) {
             throw new ValidationException("Pedido deve ter pelo menos um item");
+        }
+
+        if (request.tipoEntrega == null || (!request.tipoEntrega.equals("ENTREGA") && !request.tipoEntrega.equals("RETIRADA"))) {
+            throw new ValidationException("Tipo de entrega inválido. Use 'ENTREGA' ou 'RETIRADA'");
         }
 
         List<OrderItem> ordenados = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
 
         for (OrderItemRequest item : request.itens) {
+            if (item.produtoId == null) {
+                throw new ValidationException("ID do produto é obrigatório");
+            }
+            
+            // O filtro @TenantId do Hibernate já restringe a busca à loja atual.
             Product product = productRepository.findByIdOptional(item.produtoId)
-                    .orElseThrow(() -> new ValidationException("Produto ID " + item.produtoId + " não encontrado"));
+                    .orElseThrow(() -> new ValidationException(
+                            "Produto ID " + item.produtoId + " não encontrado ou indisponível para esta loja"));
 
             if (!product.ativo) {
                 throw new ValidationException("Produto '" + product.nome + "' não está disponível");
@@ -144,6 +159,8 @@ public class OrderService {
             return infinitePayClient.criarLink(store.infinitepayHandle, order.codigo, cobrancas, redirectUrl, webhookUrl,
                     order.clienteNome, order.clienteWhatsapp);
         } catch (IllegalStateException e) {
+            org.jboss.logging.Logger.getLogger(OrderService.class)
+                    .errorf(e, "Falha ao criar cobrança InfinitePay para o pedido %s", order.codigo);
             throw new ValidationException("Não foi possível gerar o link de pagamento. Tente novamente.");
         }
     }
@@ -345,7 +362,7 @@ public class OrderService {
     }
 
     private BigDecimal calcularTaxaEntrega(String tenantId, String tipoEntrega) {
-        if (!"ENTREGA".equalsIgnoreCase(tipoEntrega)) {
+        if (tipoEntrega == null || !tipoEntrega.equals("ENTREGA")) {
             return BigDecimal.ZERO;
         }
         return storeConfigRepository.findByTenantId(tenantId)

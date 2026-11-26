@@ -62,10 +62,12 @@ export function PublicMenuPage() {
         (sum, product) => sum + (quantities[product.id] ?? 0),
         0
     );
-    const total = selectedProducts.reduce(
+    const subtotal = selectedProducts.reduce(
         (sum, product) => sum + product.precoVenda * (quantities[product.id] ?? 0),
         0
     );
+    const taxaEntrega = checkout.tipoEntrega === DeliveryType.ENTREGA ? (menu?.loja.taxaEntregaPadrao ?? 0) : 0;
+    const total = subtotal + taxaEntrega;
 
     const updateQuantity = (product: Product, change: number) => {
         setQuantities((current) => {
@@ -325,7 +327,9 @@ export function PublicMenuPage() {
                                     <div>
                                         <h2 className="font-display text-xl font-semibold">Seu pedido</h2>
                                         <p className="mt-1 text-sm text-[#7A6658]">
-                                            {itemCount} item(ns) · Total {formatCurrency(total)}
+                                            {itemCount} item(ns) · Subtotal {formatCurrency(subtotal)}
+                                            {taxaEntrega > 0 && <> · Entrega {formatCurrency(taxaEntrega)}</>}
+                                            {' '}· Total {formatCurrency(total)}
                                         </p>
                                     </div>
                                 </div>

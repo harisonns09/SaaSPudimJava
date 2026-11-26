@@ -17,6 +17,7 @@ public class CreateOrderRequest {
     @NotEmpty(message = "Pedido deve ter pelo menos um item")
     public List<OrderItemRequest> itens;
 
+    @NotBlank(message = "Tipo de entrega é obrigatório")
     public String tipoEntrega;
 
     public String endereco;

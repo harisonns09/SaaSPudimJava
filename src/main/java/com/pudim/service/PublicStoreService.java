@@ -2,6 +2,7 @@ package com.pudim.service;
 
 import com.pudim.dto.CreateOrderRequest;
 import com.pudim.dto.OrderResponse;
+import com.pudim.dto.ProductDTO;
 import com.pudim.dto.PublicMenuResponse;
 import com.pudim.entity.Product;
 import com.pudim.entity.StoreConfig;
@@ -13,7 +14,6 @@ import com.pudim.repository.ProductRepository;
 import com.pudim.repository.StoreConfigRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -42,17 +42,22 @@ public class PublicStoreService {
                 .orElseThrow(() -> new ResourceNotFoundException("Loja não encontrada."));
         verificarAtiva(store);
         List<Product> products = productRepository.findAvailableProducts();
-        return new PublicMenuResponse(store, products);
+        List<ProductDTO> productDTOs = products.stream()
+                .map(ProductDTO::new)
+                .toList();
+        return new PublicMenuResponse(store, productDTOs);
     }
 
-    @Transactional
+    // Sem @Transactional aqui: a transação (e a sessão Hibernate, que fixa o tenant discriminador)
+    // só pode abrir depois que o tenantContext estiver definido, dentro de orderService.createOrder.
     public OrderResponse createOrder(String slug, CreateOrderRequest request) {
         String tenantId = storeConfigRepository.findTenantIdBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Loja não encontrada."));
+
+        tenantContext.setTenantId(tenantId);
         verificarAtiva(storeConfigRepository.findBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Loja não encontrada.")));
 
-        tenantContext.setTenantId(tenantId);
         return orderService.createOrder(tenantId, request);
     }
 
@@ -70,6 +75,7 @@ public class PublicStoreService {
         String transactionNsu = textoObrigatorio(payload, "transaction_nsu");
         String invoiceSlug = textoObrigatorio(payload, "invoice_slug");
 
+        tenantContext.setTenantId(tenantId);
         orderService.confirmarPagamentoInfinitePay(tenantId, orderNsu, transactionNsu, invoiceSlug);
     }
 
