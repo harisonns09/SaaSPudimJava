@@ -1,24 +1,29 @@
+# syntax=docker/dockerfile:1
 # ==========================================
 # Estágio 1: Build (Java 21 + Maven + Node.js para o Quinoa)
 # ==========================================
+FROM node:20-bookworm-slim AS node
+
 FROM maven:3.9.9-eclipse-temurin-21 AS build
 
-# Instala Node.js 20 para o Quarkus Quinoa compilar src/main/webui
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && rm -rf /var/lib/apt/lists/*
+# Copia o Node.js 20 de uma imagem oficial (sem baixar script/apt a cada build)
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -sf ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -sf ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
 WORKDIR /workspace
 
-# Copia o pom.xml e baixa dependências primeiro (melhora o cache)
+# Copia o pom.xml e baixa dependências primeiro; cache persistente do Maven entre builds
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
+RUN --mount=type=cache,target=/root/.m2 mvn dependency:go-offline -B
 
 # Copia o restante do projeto (Java + src/main/webui)
 COPY src ./src
 
-# Compila o backend + frontend (Quinoa) em modo fast-jar
-RUN mvn package -DskipTests -B
+# Compila o backend + frontend (Quinoa) em modo fast-jar; reutiliza cache do Maven e do npm
+RUN --mount=type=cache,target=/root/.m2 --mount=type=cache,target=/root/.npm \
+    mvn package -DskipTests -B
 
 # ==========================================
 # Estágio 2: Runtime (Imagem final leve para o Cloud Run)
