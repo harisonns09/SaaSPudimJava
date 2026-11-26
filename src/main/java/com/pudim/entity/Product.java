@@ -1,16 +1,18 @@
 package com.pudim.entity;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import jakarta.persistence.*;
 import org.hibernate.annotations.TenantId;
 
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "products")
-public class Product extends PanacheEntity {
+public class Product extends PanacheEntityBase {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    public Long id;
 
     @TenantId
     @Column(length = 50, nullable = false)

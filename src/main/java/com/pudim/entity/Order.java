@@ -1,6 +1,6 @@
 package com.pudim.entity;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.TenantId;
@@ -12,7 +12,11 @@ import java.util.List;
 
 @Entity
 @Table(name = "orders")
-public class Order extends PanacheEntity {
+public class Order extends PanacheEntityBase {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    public Long id;
 
     @TenantId
     @Column(length = 50, nullable = false)
