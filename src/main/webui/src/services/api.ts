@@ -1,23 +1,42 @@
 import {
   AtualizarStatusPedidoRequest,
   AuthSession,
-  CreatePublicOrderPayload,
+  CreateStoreRequest,
   DashboardData,
   CriarPedidoRequest,
-  Order,
-  OrderStatus,
   Pedido,
   PedidoStatus,
   Product,
   PublicMenuResponse,
+  StoreAccessResponse,
   StoreConfig,
+  StoreConfigUpdate,
 } from '../types';
-import { broadcastNewOrder } from '../utils/kitchenNotifications';
 
 const STORAGE_KEYS = {
   TOKEN: 'pudimflow_token',
   SESSION: 'pudimflow_session',
+  // Sessão original do superadmin, guardada enquanto ele acessa uma loja como suporte.
+  SUPERADMIN_SESSION: 'pudimflow_superadmin_session',
 } as const;
+
+const SUPERADMIN_ROLE = 'superadmin';
+
+export function decodeTokenGroups(token: string): string[] {
+  try {
+    const payload = token.split('.')[1];
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    const claims = JSON.parse(atob(padded)) as { groups?: string[] };
+    return Array.isArray(claims.groups) ? claims.groups : [];
+  } catch {
+    return [];
+  }
+}
+
+export function isSuperAdminToken(token: string | null | undefined): boolean {
+  return !!token && decodeTokenGroups(token).includes(SUPERADMIN_ROLE);
+}
 
 export const API_BASE_URL: string = import.meta.env.VITE_API_URL || '/api';
 
@@ -38,6 +57,20 @@ export function saveSession(session: AuthSession): void {
 export function clearSession(): void {
   localStorage.removeItem(STORAGE_KEYS.TOKEN);
   localStorage.removeItem(STORAGE_KEYS.SESSION);
+  localStorage.removeItem(STORAGE_KEYS.SUPERADMIN_SESSION);
+}
+
+export function isImpersonating(): boolean {
+  return localStorage.getItem(STORAGE_KEYS.SUPERADMIN_SESSION) !== null;
+}
+
+function restoreSuperadminSession(): AuthSession | null {
+  const raw = localStorage.getItem(STORAGE_KEYS.SUPERADMIN_SESSION);
+  localStorage.removeItem(STORAGE_KEYS.SUPERADMIN_SESSION);
+  if (!raw) return null;
+  const original = JSON.parse(raw) as AuthSession;
+  saveSession(original);
+  return original;
 }
 
 interface RequestOptions extends RequestInit {
@@ -123,49 +156,6 @@ export const api = {
     return session;
   },
 
-  getOrders(): Promise<Order[]> {
-    return apiRequest<Order[]>('/admin/pedidos', { requiresAuth: true });
-  },
-
-  updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
-    return apiRequest<Order>(`/admin/pedidos/${encodeURIComponent(orderId)}/status`, {
-      method: 'PATCH',
-      requiresAuth: true,
-      body: JSON.stringify({ status }),
-    });
-  },
-
-  subscribeOrdersStream(
-    onNewOrder: (order: Order) => void,
-    onConnectionChange: (connected: boolean) => void
-  ): () => void {
-    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-    if (!token) {
-      onConnectionChange(false);
-      return () => onConnectionChange(false);
-    }
-
-    const streamUrl = `${API_BASE_URL}/pedidos/stream?token=${encodeURIComponent(token)}`;
-    const eventSource = new EventSource(streamUrl);
-
-    eventSource.onopen = () => onConnectionChange(true);
-    eventSource.onerror = () => onConnectionChange(false);
-    eventSource.onmessage = (event) => {
-      try {
-        const order = JSON.parse(event.data) as Order;
-        broadcastNewOrder(order);
-        onNewOrder(order);
-      } catch {
-        // Ignore non-order events such as stream heartbeats.
-      }
-    };
-
-    return () => {
-      eventSource.close();
-      onConnectionChange(false);
-    };
-  },
-
   getProducts(): Promise<Product[]> {
     return apiRequest<Product[]>('/admin/produtos', { requiresAuth: true });
   },
@@ -212,11 +202,74 @@ export const api = {
     });
   },
 
+  listarLojas(): Promise<StoreConfig[]> {
+    return apiRequest<StoreConfig[]>('/superadmin/lojas', { requiresAuth: true });
+  },
+
+  criarLoja(payload: CreateStoreRequest): Promise<StoreConfig> {
+    return apiRequest<StoreConfig>('/superadmin/lojas', {
+      method: 'POST',
+      requiresAuth: true,
+      body: JSON.stringify(payload),
+    });
+  },
+
+  buscarLoja(tenantId: string): Promise<StoreConfig> {
+    return apiRequest<StoreConfig>(`/superadmin/lojas/${encodeURIComponent(tenantId)}`, {
+      requiresAuth: true,
+    });
+  },
+
+  atualizarLoja(tenantId: string, config: StoreConfigUpdate): Promise<StoreConfig> {
+    return apiRequest<StoreConfig>(`/superadmin/lojas/${encodeURIComponent(tenantId)}`, {
+      method: 'PUT',
+      requiresAuth: true,
+      body: JSON.stringify(config),
+    });
+  },
+
+  alterarStatusLoja(tenantId: string, ativa: boolean): Promise<StoreConfig> {
+    return apiRequest<StoreConfig>(`/superadmin/lojas/${encodeURIComponent(tenantId)}/status`, {
+      method: 'PATCH',
+      requiresAuth: true,
+      body: JSON.stringify({ ativa }),
+    });
+  },
+
+  /**
+   * Entra na loja como suporte. Guarda a sessão do superadmin para restaurá-la depois
+   * com encerrarSuporte().
+   */
+  async iniciarSuporte(tenantId: string): Promise<AuthSession> {
+    const current = getStoredSession();
+    const access = await apiRequest<StoreAccessResponse>(
+      `/superadmin/lojas/${encodeURIComponent(tenantId)}/acessar`,
+      { method: 'POST', requiresAuth: true },
+    );
+
+    if (current && !isImpersonating()) {
+      localStorage.setItem(STORAGE_KEYS.SUPERADMIN_SESSION, JSON.stringify(current));
+    }
+
+    const session: AuthSession = {
+      token: access.token,
+      tenantId,
+      nome: access.nomeLoja,
+      email: current?.email ?? '',
+    };
+    saveSession(session);
+    return session;
+  },
+
+  encerrarSuporte(): AuthSession | null {
+    return restoreSuperadminSession();
+  },
+
   getStoreConfig(): Promise<StoreConfig> {
     return apiRequest<StoreConfig>('/admin/configuracoes', { requiresAuth: true });
   },
 
-  updateStoreConfig(config: StoreConfig): Promise<StoreConfig> {
+  updateStoreConfig(config: StoreConfigUpdate): Promise<StoreConfig> {
     return apiRequest<StoreConfig>('/admin/configuracoes', {
       method: 'PUT',
       requiresAuth: true,
@@ -229,22 +282,6 @@ export const api = {
       `/loja/${encodeURIComponent(slug)}/cardapio`,
       { tenantSlug: slug }
     );
-  },
-
-  async createPublicOrder(
-    slug: string,
-    payload: CreatePublicOrderPayload
-  ): Promise<Order> {
-    const order = await apiRequest<Order>(
-      `/loja/${encodeURIComponent(slug)}/pedidos`,
-      {
-        method: 'POST',
-        tenantSlug: slug,
-        body: JSON.stringify(payload),
-      }
-    );
-    broadcastNewOrder(order);
-    return order;
   },
 
   listarPedidos(status?: PedidoStatus, pageSize = 100): Promise<Pedido[]> {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, LoaderCircle, RefreshCw, Search, XCircle } from 'lucide-react';
 import { api } from '../../services/api';
 import { DeliveryType, Pedido, PedidoStatus } from '../../types';
@@ -12,7 +12,7 @@ const COLUMNS: { status: PedidoStatus; label: string; next?: PedidoStatus; nextL
 ];
 
 const CANCELABLE: PedidoStatus[] = ['PENDENTE', 'EM_PREPARO', 'PRONTO_PARA_ENTREGA'];
-const REFRESH_INTERVAL_MS = 30_000;
+const REFRESH_INTERVAL_MS = 15_000;
 
 interface Feedback {
     type: 'success' | 'error';
@@ -21,6 +21,27 @@ interface Feedback {
 
 function errorMessage(error: unknown, fallback: string): string {
     return error instanceof Error ? error.message : fallback;
+}
+
+function playNewOrderSound() {
+    try {
+        const AudioCtor = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const ctx = new AudioCtor();
+        [0, 0.25].forEach((offset) => {
+            const oscillator = ctx.createOscillator();
+            const gain = ctx.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.value = 880;
+            gain.gain.setValueAtTime(0.2, ctx.currentTime + offset);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.2);
+            oscillator.connect(gain).connect(ctx.destination);
+            oscillator.start(ctx.currentTime + offset);
+            oscillator.stop(ctx.currentTime + offset + 0.2);
+        });
+        window.setTimeout(() => void ctx.close(), 1000);
+    } catch {
+        // Navegadores sem Web Audio ou com áudio bloqueado: o aviso visual continua funcionando.
+    }
 }
 
 function normalizeText(value: string): string {
@@ -34,6 +55,8 @@ export function OrdersPage() {
     const [feedback, setFeedback] = useState<Feedback | null>(null);
     const [updatingId, setUpdatingId] = useState<number | null>(null);
     const [busca, setBusca] = useState('');
+    // null = ainda não carregou; o primeiro carregamento só registra os pagos existentes, sem alertar.
+    const knownPaidIds = useRef<Set<number> | null>(null);
 
     const pedidosFiltrados = useMemo(() => {
         const termo = normalizeText(busca);
@@ -54,8 +77,23 @@ export function OrdersPage() {
     const loadPedidos = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
         try {
-            setPedidos(await api.listarPedidos());
+            const lista = await api.listarPedidos();
+            setPedidos(lista);
             setLoadError(null);
+
+            const paidIds = lista.filter((p) => p.pagamentoStatus === 'PAGO').map((p) => p.id);
+            const known = knownPaidIds.current;
+            if (known) {
+                const novos = lista.filter((p) => p.pagamentoStatus === 'PAGO' && !known.has(p.id));
+                if (novos.length > 0) {
+                    playNewOrderSound();
+                    const texto = novos.length === 1
+                        ? `Novo pedido pago: ${novos[0].codigo} (${novos[0].clienteNome})`
+                        : `${novos.length} novos pedidos pagos`;
+                    setFeedback({ type: 'success', message: texto });
+                }
+            }
+            knownPaidIds.current = new Set(paidIds);
         } catch (error) {
             setLoadError(errorMessage(error, 'Não foi possível carregar os pedidos.'));
         } finally {
@@ -187,6 +225,17 @@ export function OrdersPage() {
                                                 </div>
                                                 <p className="mt-1 font-medium text-[#291D16]">{pedido.clienteNome}</p>
                                                 <p className="text-xs text-[#7A6658]">{pedido.clienteWhatsapp}</p>
+
+                                                {pedido.pagamentoStatus === 'PAGO' && (
+                                                    <span className="mt-1.5 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                                                        Pago{pedido.pagoEm ? ` em ${new Date(pedido.pagoEm).toLocaleString('pt-BR')}` : ''}
+                                                    </span>
+                                                )}
+                                                {pedido.pagamentoStatus === 'AGUARDANDO' && (
+                                                    <span className="mt-1.5 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                                                        Aguardando pagamento
+                                                    </span>
+                                                )}
 
                                                 <ul className="mt-2 space-y-0.5 text-xs text-[#5C4A3E]">
                                                     {pedido.itens.map((item) => (

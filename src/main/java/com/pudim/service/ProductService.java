@@ -1,6 +1,6 @@
 package com.pudim.service;
 
-import com.pudim.model.Product;
+import com.pudim.entity.Product;
 import com.pudim.exception.ResourceNotFoundException;
 import com.pudim.exception.ValidationException;
 import com.pudim.multitenancy.TenantContext;

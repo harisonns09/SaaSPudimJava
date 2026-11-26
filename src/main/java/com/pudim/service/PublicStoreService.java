@@ -1,8 +1,13 @@
 package com.pudim.service;
 
+import com.pudim.dto.CreateOrderRequest;
+import com.pudim.dto.OrderResponse;
+import com.pudim.dto.PublicMenuResponse;
+import com.pudim.entity.Product;
+import com.pudim.entity.StoreConfig;
 import com.pudim.exception.ResourceNotFoundException;
+import com.pudim.exception.StoreInactiveException;
 import com.pudim.exception.ValidationException;
-import com.pudim.model.*;
 import com.pudim.multitenancy.TenantContext;
 import com.pudim.repository.ProductRepository;
 import com.pudim.repository.StoreConfigRepository;
@@ -35,6 +40,7 @@ public class PublicStoreService {
 
         StoreConfig store = storeConfigRepository.findBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Loja não encontrada."));
+        verificarAtiva(store);
         List<Product> products = productRepository.findAvailableProducts();
         return new PublicMenuResponse(store, products);
     }
@@ -43,7 +49,9 @@ public class PublicStoreService {
     public OrderResponse createOrder(String slug, CreateOrderRequest request) {
         String tenantId = storeConfigRepository.findTenantIdBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Loja não encontrada."));
-        
+        verificarAtiva(storeConfigRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Loja não encontrada.")));
+
         tenantContext.setTenantId(tenantId);
         return orderService.createOrder(tenantId, request);
     }
@@ -71,5 +79,11 @@ public class PublicStoreService {
             throw new ValidationException("Campo obrigatório ausente no webhook: " + campo);
         }
         return valor.toString();
+    }
+
+    private void verificarAtiva(StoreConfig store) {
+        if (!store.ativa) {
+            throw new StoreInactiveException("Esta loja não está disponível no momento.");
+        }
     }
 }

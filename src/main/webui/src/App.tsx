@@ -4,15 +4,24 @@ import { DashboardPage } from './pages/admin/Dashboard';
 import { ProductsPage } from './pages/admin/Products';
 import { OrdersPage } from './pages/admin/Orders';
 import { SettingsPage } from './pages/admin/Settings';
+import { SuperAdminStoresPage } from './pages/superadmin/Stores';
+import { SuperAdminLoginPage } from './pages/superadmin/Login';
 import { LoginPage } from './pages/Login';
 import { RegisterPage } from './pages/Register'; // Importa a nova página
 import { PublicMenuPage } from './pages/public/PublicMenu';
 import { OrderTrackingPage } from './pages/public/MeusPedidos';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { isSuperAdminToken } from './services/api';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
     const { isAuthenticated } = useAuth();
     return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+}
+
+function SuperAdminRoute({ children }: { children: React.ReactNode }) {
+    const { session } = useAuth();
+    if (!session) return <Navigate to="/superadmin/login" replace />;
+    return isSuperAdminToken(session.token) ? <>{children}</> : <Navigate to="/superadmin/login" replace />;
 }
 
 export function App() {
@@ -23,6 +32,13 @@ export function App() {
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} /> {/* Adiciona a nova rota */}
                     <Route path="/produtos" element={<Navigate to="/admin/produtos" replace />} />
+
+                    <Route path="/superadmin/login" element={<SuperAdminLoginPage />} />
+
+                    <Route
+                        path="/superadmin"
+                        element={<SuperAdminRoute><SuperAdminStoresPage /></SuperAdminRoute>}
+                    />
 
                     <Route
                         path="/admin"

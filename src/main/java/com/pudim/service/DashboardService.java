@@ -1,11 +1,11 @@
 package com.pudim.service;
 
-import com.pudim.model.DashboardResponse;
-import com.pudim.model.DashboardResponse.PedidoResumo;
-import com.pudim.model.DashboardResponse.TopProduto;
-import com.pudim.model.Order;
-import com.pudim.model.OrderItem;
-import com.pudim.model.OrderStatus;
+import com.pudim.dto.DashboardResponse;
+import com.pudim.dto.DashboardResponse.PedidoResumo;
+import com.pudim.dto.DashboardResponse.TopProduto;
+import com.pudim.entity.Order;
+import com.pudim.entity.OrderItem;
+import com.pudim.entity.OrderStatus;
 import com.pudim.multitenancy.TenantContext;
 import com.pudim.repository.OrderRepository;
 import jakarta.enterprise.context.ApplicationScoped;

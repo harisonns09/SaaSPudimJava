@@ -1,7 +1,7 @@
 package com.pudim.resource;
 
-import com.pudim.model.OrderResponse;
-import com.pudim.model.UpdateOrderStatusRequest;
+import com.pudim.dto.OrderResponse;
+import com.pudim.dto.UpdateOrderStatusRequest;
 import com.pudim.service.OrderService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;

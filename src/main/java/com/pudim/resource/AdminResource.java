@@ -1,22 +1,15 @@
 package com.pudim.resource;
 
-import com.pudim.model.Product;
-import com.pudim.model.ProductStatusRequest;
-import com.pudim.model.StockAdjustmentRequest;
-import com.pudim.model.StoreConfig;
+import com.pudim.dto.ProductStatusRequest;
+import com.pudim.dto.StockAdjustmentRequest;
+import com.pudim.dto.StoreConfigUpdateRequest;
+import com.pudim.entity.Product;
+import com.pudim.entity.StoreConfig;
 import com.pudim.service.ProductService;
 import com.pudim.service.StoreConfigService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.PATCH;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
@@ -90,7 +83,7 @@ public class AdminResource {
 
     @PUT
     @Path("/configuracoes")
-    public StoreConfig updateStoreConfig(StoreConfig changes) {
+    public StoreConfig updateStoreConfig(StoreConfigUpdateRequest changes) {
         return storeConfigService.saveConfiguration(getTenantId(), changes);
     }
 

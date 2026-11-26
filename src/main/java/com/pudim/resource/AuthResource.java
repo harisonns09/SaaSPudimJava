@@ -1,7 +1,7 @@
 package com.pudim.resource;
 
-import com.pudim.model.LoginRequest;
-import com.pudim.model.RegistrationRequest;
+import com.pudim.dto.LoginRequest;
+import com.pudim.dto.RegistrationRequest;
 import com.pudim.service.AuthService;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;

@@ -1,6 +1,6 @@
 package com.pudim.resource;
 
-import com.pudim.model.DashboardResponse;
+import com.pudim.dto.DashboardResponse;
 import com.pudim.service.DashboardService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;

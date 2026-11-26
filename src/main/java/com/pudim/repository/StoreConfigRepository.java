@@ -1,6 +1,6 @@
 package com.pudim.repository;
 
-import com.pudim.model.StoreConfig;
+import com.pudim.entity.StoreConfig;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;

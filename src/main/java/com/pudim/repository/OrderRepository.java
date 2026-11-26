@@ -1,6 +1,6 @@
 package com.pudim.repository;
 
-import com.pudim.model.Order;
+import com.pudim.entity.Order;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 

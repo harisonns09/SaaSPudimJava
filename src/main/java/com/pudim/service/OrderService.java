@@ -1,8 +1,9 @@
 package com.pudim.service;
 
+import com.pudim.dto.*;
+import com.pudim.entity.*;
 import com.pudim.exception.ResourceNotFoundException;
 import com.pudim.exception.ValidationException;
-import com.pudim.model.*;
 import com.pudim.multitenancy.TenantContext;
 import com.pudim.repository.OrderRepository;
 import com.pudim.repository.OrderStatusHistoryRepository;

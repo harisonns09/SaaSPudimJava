@@ -1,8 +1,8 @@
 package com.pudim.resource;
 
-import com.pudim.model.CreateOrderRequest;
-import com.pudim.model.OrderResponse;
-import com.pudim.model.PublicMenuResponse;
+import com.pudim.dto.CreateOrderRequest;
+import com.pudim.dto.OrderResponse;
+import com.pudim.dto.PublicMenuResponse;
 import com.pudim.service.PublicStoreService;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;

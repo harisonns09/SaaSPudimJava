@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrandMark } from './AdminLayout'; // Reutilizando o componente da marca
+import { BrandMark } from './BrandMark';
 
 interface AuthLayoutProps {
     title: string;

@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { ImagePlus, LoaderCircle, PackagePlus } from 'lucide-react';
+import { ImagePlus, LoaderCircle, PackagePlus, Pencil, Power, X } from 'lucide-react';
 import { api } from '../../services/api';
 import { Product } from '../../types';
 import { formatCurrency, formatWeight } from '../../utils/format';
@@ -32,6 +32,45 @@ export function ProductsPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const [editing, setEditing] = useState<Product | null>(null);
+    const [togglingId, setTogglingId] = useState<string | null>(null);
+
+    const startEdit = (product: Product) => {
+        setEditing(product);
+        setForm({
+            nome: product.nome,
+            descricao: product.descricao ?? '',
+            pesoGramas: String(product.pesoGramas),
+            precoVenda: String(product.precoVenda),
+            custoEstimado: String(product.custoEstimado ?? ''),
+            estoqueAtual: String(product.estoqueAtual),
+            imagemUrl: product.imagemUrl ?? '',
+        });
+        setError(null);
+        setSuccess(null);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const cancelEdit = () => {
+        setEditing(null);
+        setForm(INITIAL_FORM);
+        setError(null);
+    };
+
+    const toggleActive = async (product: Product) => {
+        setTogglingId(product.id);
+        setError(null);
+        setSuccess(null);
+        try {
+            const updated = await api.toggleProductActive(product.id, !product.ativo);
+            setProducts((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+            setSuccess(`${updated.nome} ${updated.ativo ? 'ativado' : 'desativado'} com sucesso.`);
+        } catch (toggleError) {
+            setError(toggleError instanceof Error ? toggleError.message : 'Não foi possível alterar o status do produto.');
+        } finally {
+            setTogglingId(null);
+        }
+    };
 
     const loadProducts = useCallback(async () => {
         setLoading(true);
@@ -74,19 +113,27 @@ export function ProductsPage() {
 
         setSaving(true);
         try {
-            const created = await api.saveProduct({
+            const saved = await api.saveProduct({
+                ...(editing
+                    ? { id: editing.id, ativo: editing.ativo, destaque: editing.destaque }
+                    : { ativo: true }),
                 nome: form.nome.trim(),
                 descricao: form.descricao.trim(),
                 pesoGramas: weight,
                 precoVenda: price,
                 custoEstimado: cost,
                 estoqueAtual: stock,
-                ativo: true,
                 imagemUrl: form.imagemUrl.trim(),
             });
-            setProducts((current) => [created, ...current]);
+            if (editing) {
+                setProducts((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+                setEditing(null);
+                setSuccess(`${saved.nome} foi atualizado com sucesso.`);
+            } else {
+                setProducts((current) => [saved, ...current]);
+                setSuccess(`${saved.nome} foi cadastrado com sucesso.`);
+            }
             setForm(INITIAL_FORM);
-            setSuccess(`${created.nome} foi cadastrado com sucesso.`);
         } catch (saveError) {
             setError(saveError instanceof Error ? saveError.message : 'Não foi possível cadastrar o produto.');
         } finally {
@@ -102,8 +149,14 @@ export function ProductsPage() {
                         <PackagePlus className="h-5 w-5" />
                     </div>
                     <div>
-                        <h2 className="font-display text-lg font-semibold text-[#291D16]">Cadastrar produto</h2>
-                        <p className="text-sm text-[#7A6658]">Adicione um produto ao estoque e ao cardápio da sua loja.</p>
+                        <h2 className="font-display text-lg font-semibold text-[#291D16]">
+                            {editing ? `Editar ${editing.nome}` : 'Cadastrar produto'}
+                        </h2>
+                        <p className="text-sm text-[#7A6658]">
+                            {editing
+                                ? 'Altere os dados do produto. A exclusão não está disponível; use desativar.'
+                                : 'Adicione um produto ao estoque e ao cardápio da sua loja.'}
+                        </p>
                     </div>
                 </div>
 
@@ -210,14 +263,23 @@ export function ProductsPage() {
                         </p>
                     )}
 
-                    <div className="flex justify-end sm:col-span-2">
+                    <div className="flex justify-end gap-2 sm:col-span-2">
+                        {editing && (
+                            <button
+                                type="button"
+                                onClick={cancelEdit}
+                                className="inline-flex items-center gap-2 rounded-lg border border-[#EAE1D5] px-4 py-2.5 text-sm font-semibold text-[#5C4A3E] hover:bg-[#FAF7F2]"
+                            >
+                                <X className="h-4 w-4" /> Cancelar
+                            </button>
+                        )}
                         <button
                             type="submit"
                             disabled={saving}
                             className="inline-flex items-center gap-2 rounded-lg bg-[#B45309] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#92400E] disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             {saving && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                            {saving ? 'Salvando...' : 'Cadastrar produto'}
+                            {saving ? 'Salvando...' : editing ? 'Salvar alterações' : 'Cadastrar produto'}
                         </button>
                     </div>
                 </form>
@@ -241,10 +303,42 @@ export function ProductsPage() {
                                     className="h-12 w-12 shrink-0 rounded-lg object-cover"
                                 />
                                 <div className="min-w-0 flex-1">
-                                    <p className="truncate text-sm font-semibold text-[#291D16]">{product.nome}</p>
+                                    <p className="flex items-center gap-2 truncate text-sm font-semibold text-[#291D16]">
+                                        <span className="truncate">{product.nome}</span>
+                                        <span
+                                            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                                                product.ativo ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-500'
+                                            }`}
+                                        >
+                                            {product.ativo ? 'Ativo' : 'Inativo'}
+                                        </span>
+                                    </p>
                                     <p className="text-xs text-[#7A6658]">{formatWeight(product.pesoGramas)} · Estoque: {product.estoqueAtual}</p>
                                 </div>
                                 <p className="shrink-0 text-sm font-semibold text-[#291D16]">{formatCurrency(product.precoVenda)}</p>
+                                <div className="flex shrink-0 gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => startEdit(product)}
+                                        aria-label={`Editar ${product.nome}`}
+                                        className="rounded-lg p-2 text-[#5C4A3E] hover:bg-[#FAF7F2]"
+                                    >
+                                        <Pencil className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => void toggleActive(product)}
+                                        disabled={togglingId === product.id}
+                                        aria-label={`${product.ativo ? 'Desativar' : 'Ativar'} ${product.nome}`}
+                                        className="rounded-lg p-2 text-[#5C4A3E] hover:bg-[#FAF7F2] disabled:opacity-50"
+                                    >
+                                        {togglingId === product.id ? (
+                                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <Power className="h-4 w-4" />
+                                        )}
+                                    </button>
+                                </div>
                             </li>
                         ))}
                     </ul>

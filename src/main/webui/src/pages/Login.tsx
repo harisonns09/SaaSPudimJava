@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthLayout } from '../components/AuthLayout';
-import { api } from '../services/api';
+import { api, isSuperAdminToken } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 export function LoginPage() {
@@ -20,7 +20,7 @@ export function LoginPage() {
         try {
             const session = await api.login(email, password);
             login(session); // Atualiza o contexto de autenticação
-            navigate('/admin');
+            navigate(isSuperAdminToken(session.token) ? '/superadmin' : '/admin');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.');
         } finally {

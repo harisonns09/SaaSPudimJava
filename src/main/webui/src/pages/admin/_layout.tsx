@@ -9,8 +9,9 @@ import {
     Sparkles,
     X,
 } from 'lucide-react';
-import { BrandMark } from '../../components/AdminLayout';
+import { BrandMark } from '../../components/BrandMark';
 import { useAuth } from '../../context/AuthContext';
+import { api, isImpersonating } from '../../services/api';
 
 const navigation = [
     { label: 'Dashboard', path: '/admin', icon: LayoutDashboard },
@@ -28,10 +29,17 @@ const pageTitles: Record<string, string> = {
 
 export function AdminLayout() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const { session, logout } = useAuth();
+    const { session, login, logout } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
     const title = pageTitles[location.pathname] ?? 'Painel administrativo';
+    const supportMode = isImpersonating();
+
+    const exitSupport = () => {
+        const original = api.encerrarSuporte();
+        if (original) login(original);
+        navigate('/superadmin');
+    };
 
     const sidebar = (
         <div className="flex h-full flex-col justify-between bg-white">
@@ -130,7 +138,25 @@ export function AdminLayout() {
             )}
 
             <div className="flex min-w-0 flex-1 flex-col">
+                {supportMode && (
+                    <div
+                        role="status"
+                        className="flex flex-wrap items-center justify-between gap-2 bg-[#B45309] px-4 py-2 text-sm text-white sm:px-6 lg:px-8"
+                    >
+                        <span>
+                            Modo suporte: você está acessando a loja <strong>{session?.nome}</strong> como superadmin.
+                        </span>
+                        <button
+                            type="button"
+                            onClick={exitSupport}
+                            className="rounded-md bg-white/15 px-3 py-1 font-semibold hover:bg-white/25"
+                        >
+                            Sair do suporte
+                        </button>
+                    </div>
+                )}
                 <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-[#EAE1D5] bg-white/95 px-4 py-3.5 backdrop-blur-sm sm:px-6 lg:px-8">
+
                     <button
                         type="button"
                         onClick={() => setMobileMenuOpen(true)}
