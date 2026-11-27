@@ -14,6 +14,7 @@ public class ProductDTO {
     public String imagemUrl;
     public String destaque;
     public boolean ativo;
+    public BigDecimal pesogramas;
 
     public ProductDTO() {}
 
@@ -27,5 +28,6 @@ public class ProductDTO {
         this.imagemUrl = product.imagemUrl;
         this.destaque = product.destaque;
         this.ativo = product.ativo;
+        this.pesogramas = product.pesogramas;
     }
 }

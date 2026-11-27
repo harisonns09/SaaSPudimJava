@@ -48,6 +48,7 @@ public class ProductService {
         product.imagemUrl = changes.imagemUrl;
         product.destaque = changes.destaque;
         product.ativo = changes.ativo;
+        product.pesogramas = changes.pesogramas;
         return product;
     }
 

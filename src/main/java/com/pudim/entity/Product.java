@@ -36,4 +36,6 @@ public class Product extends PanacheEntityBase {
     public String destaque;
 
     public boolean ativo = true;
+
+    public BigDecimal pesogramas = BigDecimal.ZERO;
 }
