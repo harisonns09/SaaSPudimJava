@@ -11,6 +11,7 @@ import { LoginPage } from './pages/Login';
 import { RegisterPage } from './pages/Register'; // Importa a nova página
 import { PublicMenuPage } from './pages/public/PublicMenu';
 import { OrderTrackingPage } from './pages/public/MeusPedidos';
+import { PagamentoPage } from './pages/public/Pagamento';
 import { TermosPage, PrivacidadePage } from './pages/Legal';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { isSuperAdminToken } from './services/api';
@@ -57,6 +58,7 @@ export function App() {
                     <Route path="/privacidade" element={<PrivacidadePage />} />
 
                     <Route path="/:slug/pedido" element={<OrderTrackingPage />} />
+                    <Route path="/:slug/pagamento/:codigo" element={<PagamentoPage />} />
 
                     <Route path="/:slug" element={<PublicMenuPage />} />
 

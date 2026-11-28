@@ -1,10 +1,10 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowRight, CakeSlice, LoaderCircle, Minus, Plus, ShoppingBag } from 'lucide-react';
 import { ResilientImage } from '../../components/ResilientImage';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { api } from '../../services/api';
-import { CriarPedidoRequest, DeliveryType, Pedido, Product, PublicMenuResponse } from '../../types';
+import { CriarPedidoRequest, DeliveryType, Product, PublicMenuResponse } from '../../types';
 import { formatCurrency } from '../../utils/format';
 
 interface CheckoutForm {
@@ -27,6 +27,7 @@ const EMPTY_CHECKOUT: CheckoutForm = {
 
 export function PublicMenuPage() {
     const { slug = '' } = useParams<{ slug: string }>();
+    const navigate = useNavigate();
     const [menu, setMenu] = useState<PublicMenuResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -34,11 +35,7 @@ export function PublicMenuPage() {
     const [checkout, setCheckout] = useState<CheckoutForm>(EMPTY_CHECKOUT);
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
-    const [confirmedOrder, setConfirmedOrder] = useState<Pedido | null>(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
-    const [pendingOrder, setPendingOrder] = useState<Pedido | null>(null);
-    const [paymentError, setPaymentError] = useState<string | null>(null);
-    const [paymentLoading, setPaymentLoading] = useState(false);
 
     const loadMenu = useCallback(async () => {
         setLoading(true);
@@ -114,11 +111,9 @@ export function PublicMenuPage() {
             setCheckout(EMPTY_CHECKOUT);
             void loadMenu();
             setConfirmOpen(false);
-            if (pedido.pagamentoStatus === 'AGUARDANDO') {
-                setPendingOrder(pedido);
-            } else {
-                setConfirmedOrder(pedido);
-            }
+            navigate(
+                `/${slug}/pagamento/${pedido.codigo}?whatsapp=${encodeURIComponent(pedido.clienteWhatsapp)}`
+            );
         } catch (submitErr) {
             setSubmitError(
                 submitErr instanceof Error
@@ -302,31 +297,7 @@ export function PublicMenuPage() {
                                     })}
                                 </div>
                             )}
-                        </section>
-
-                        {confirmedOrder && (
-                            <section className="mt-6 rounded-2xl border border-[#BBE5CB] bg-[#F1FBF5] p-6 text-center">
-                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#16834A]">Pedido recebido</p>
-                                <h2 className="mt-2 font-display text-2xl font-semibold">Obrigado, {confirmedOrder.clienteNome}!</h2>
-                                <p className="mt-2 text-sm text-[#4B5D52]">
-                                    Seu código de pedido é <strong className="font-mono">{confirmedOrder.codigo}</strong>. Guarde-o para acompanhar seu pedido.
-                                </p>
-                                <p className="mt-1 text-sm text-[#4B5D52]">Total: {formatCurrency(confirmedOrder.valorTotal)}</p>
-                                <button
-                                    type="button"
-                                    onClick={() => setConfirmedOrder(null)}
-                                    className="mt-4 text-sm font-semibold text-[#16834A] underline"
-                                >
-                                    Fazer outro pedido
-                                </button>
-                                <a
-                                    href={`/${slug}/pedido?whatsapp=${encodeURIComponent(confirmedOrder.clienteWhatsapp)}`}
-                                    className="mt-4 ml-4 inline-block text-sm font-semibold text-[#16834A] underline"
-                                >
-                                    Acompanhar pedido
-                                </a>
-                            </section>
-                        )}
+            </section>
 
                         {itemCount > 0 && (
                             <section id="pedido" className="scroll-mt-24 rounded-2xl border border-[#EADBC8] bg-white p-5 sm:p-7">
@@ -462,49 +433,6 @@ export function PublicMenuPage() {
                 loading={submitting}
                 onConfirm={submitOrder}
                 onCancel={() => setConfirmOpen(false)}
-            />
-            <ConfirmDialog
-                open={pendingOrder !== null}
-                title="Pedido registrado"
-                message={`Pedido ${pendingOrder?.codigo ?? ''} criado com pagamento pendente. Deseja prosseguir para o pagamento agora ou pagar depois?${paymentError ? ` ${paymentError}` : ''}`}
-                confirmLabel="Prosseguir para pagamento"
-                secondaryLabel="Pagar depois"
-                loading={paymentLoading}
-                onConfirm={async () => {
-                    if (!pendingOrder) return;
-                    setPaymentLoading(true);
-                    setPaymentError(null);
-                    try {
-                        const pedido = await api.gerarPagamentoPublico(
-                            slug,
-                            pendingOrder.codigo,
-                            pendingOrder.clienteWhatsapp
-                        );
-                        if (pedido.pagamentoUrl) {
-                            window.location.href = pedido.pagamentoUrl;
-                            return;
-                        }
-                        setPaymentError('Não foi possível gerar o link de pagamento.');
-                    } catch (paymentErr) {
-                        setPaymentError(
-                            paymentErr instanceof Error
-                                ? paymentErr.message
-                                : 'Não foi possível gerar o link de pagamento.'
-                        );
-                    } finally {
-                        setPaymentLoading(false);
-                    }
-                }}
-                onSecondary={() => {
-                    setConfirmedOrder(pendingOrder);
-                    setPendingOrder(null);
-                    setPaymentError(null);
-                }}
-                onCancel={() => {
-                    setConfirmedOrder(pendingOrder);
-                    setPendingOrder(null);
-                    setPaymentError(null);
-                }}
             />
             <footer className="border-t border-[#EAE1D5] bg-white px-5 py-5 text-center text-xs text-[#7A6658]">
                 Cardápio online · {menu?.loja.nomeLoja || 'Confeitaria artesanal'}
